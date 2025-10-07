@@ -23,17 +23,6 @@ type signalConfig struct {
 	tableName string
 }
 
-var signalConfigs = map[telemetrytypes.Signal]signalConfig{
-	telemetrytypes.SignalTraces: {
-		dbName:    TracesDBName,
-		tableName: TraceResourceV3TableName,
-	},
-	telemetrytypes.SignalLogs: {
-		dbName:    LogsDBName,
-		tableName: LogsResourceV2TableName,
-	},
-}
-
 // Generic resource filter statement builder
 type resourceFilterStatementBuilder[T any] struct {
 	logger           *slog.Logger
@@ -41,6 +30,7 @@ type resourceFilterStatementBuilder[T any] struct {
 	conditionBuilder qbtypes.ConditionBuilder
 	metadataStore    telemetrytypes.MetadataStore
 	signal           telemetrytypes.Signal
+	dbName           string
 
 	fullTextColumn *telemetrytypes.TelemetryFieldKey
 	jsonBodyPrefix string
@@ -59,6 +49,7 @@ func NewTraceResourceFilterStatementBuilder(
 	fieldMapper qbtypes.FieldMapper,
 	conditionBuilder qbtypes.ConditionBuilder,
 	metadataStore telemetrytypes.MetadataStore,
+	dbName string,
 ) *resourceFilterStatementBuilder[qbtypes.TraceAggregation] {
 	set := factory.NewScopedProviderSettings(settings, "github.com/SigNoz/signoz/pkg/querybuilder/resourcefilter")
 	return &resourceFilterStatementBuilder[qbtypes.TraceAggregation]{
@@ -67,6 +58,7 @@ func NewTraceResourceFilterStatementBuilder(
 		conditionBuilder: conditionBuilder,
 		metadataStore:    metadataStore,
 		signal:           telemetrytypes.SignalTraces,
+		dbName:           dbName,
 	}
 }
 
@@ -75,6 +67,7 @@ func NewLogResourceFilterStatementBuilder(
 	fieldMapper qbtypes.FieldMapper,
 	conditionBuilder qbtypes.ConditionBuilder,
 	metadataStore telemetrytypes.MetadataStore,
+	dbName string,
 	fullTextColumn *telemetrytypes.TelemetryFieldKey,
 	jsonBodyPrefix string,
 	jsonKeyToKey qbtypes.JsonKeyToFieldFunc,
@@ -86,6 +79,7 @@ func NewLogResourceFilterStatementBuilder(
 		conditionBuilder: conditionBuilder,
 		metadataStore:    metadataStore,
 		signal:           telemetrytypes.SignalLogs,
+		dbName:           dbName,
 		fullTextColumn:   fullTextColumn,
 		jsonBodyPrefix:   jsonBodyPrefix,
 		jsonKeyToKey:     jsonKeyToKey,
@@ -117,14 +111,19 @@ func (b *resourceFilterStatementBuilder[T]) Build(
 	query qbtypes.QueryBuilderQuery[T],
 	variables map[string]qbtypes.VariableItem,
 ) (*qbtypes.Statement, error) {
-	config, exists := signalConfigs[b.signal]
-	if !exists {
+	var tableName string
+	switch b.signal {
+	case telemetrytypes.SignalTraces:
+		tableName = TraceResourceV3TableName
+	case telemetrytypes.SignalLogs:
+		tableName = LogsResourceV2TableName
+	default:
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedSignal, b.signal)
 	}
 
 	q := sqlbuilder.NewSelectBuilder()
 	q.Select("fingerprint")
-	q.From(fmt.Sprintf("%s.%s", config.dbName, config.tableName))
+	q.From(fmt.Sprintf("%s.%s", b.dbName, tableName))
 
 	keySelectors := b.getKeySelectors(query)
 	keys, _, err := b.metadataStore.GetKeysMulti(ctx, keySelectors)

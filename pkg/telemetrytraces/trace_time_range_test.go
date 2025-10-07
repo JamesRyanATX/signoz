@@ -42,6 +42,7 @@ func TestTraceTimeRangeOptimization(t *testing.T) {
 		resourceFilterFM,
 		resourceFilterCB,
 		mockMetadataStore,
+		DBName(),
 	)
 
 	aggExprRewriter := querybuilder.NewAggExprRewriter(instrumentationtest.New().ToProviderSettings(), nil, fm, cb, "", nil)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/SigNoz/signoz/pkg/telemetrylogs"
 	logsV3 "github.com/SigNoz/signoz/pkg/query-service/app/logs/v3"
 	"github.com/SigNoz/signoz/pkg/query-service/app/resource"
 	"github.com/SigNoz/signoz/pkg/query-service/constants"
@@ -45,9 +46,13 @@ const (
 	BODY                         = "body"
 	DISTRIBUTED_LOGS_V2          = "distributed_logs_v2"
 	DISTRIBUTED_LOGS_V2_RESOURCE = "distributed_logs_v2_resource"
-	DB_NAME                      = "signoz_logs"
 	NANOSECOND                   = 1000000000
 )
+
+// dbName returns the database name for logs
+func dbName() string {
+	return telemetrylogs.DBName()
+}
 
 func getClickhouseLogsColumnDataType(columnDataType v3.AttributeKeyDataType) string {
 	if columnDataType == v3.AttributeKeyDataTypeFloat64 || columnDataType == v3.AttributeKeyDataTypeInt64 {
@@ -383,7 +388,7 @@ func buildLogsQuery(panelType v3.PanelType, start, end, step int64, mq *v3.Build
 	}
 
 	// build the where clause for resource table
-	resourceSubQuery, err := resource.BuildResourceSubQuery(DB_NAME, DISTRIBUTED_LOGS_V2_RESOURCE, bucketStart, bucketEnd, mq.Filters, mq.GroupBy, mq.AggregateAttribute, false)
+	resourceSubQuery, err := resource.BuildResourceSubQuery(dbName(), DISTRIBUTED_LOGS_V2_RESOURCE, bucketStart, bucketEnd, mq.Filters, mq.GroupBy, mq.AggregateAttribute, false)
 	if err != nil {
 		return "", err
 	}
@@ -472,7 +477,7 @@ func buildLogsLiveTailQuery(mq *v3.BuilderQuery) (string, error) {
 	}
 
 	// no values for bucket start and end
-	resourceSubQuery, err := resource.BuildResourceSubQuery(DB_NAME, DISTRIBUTED_LOGS_V2_RESOURCE, 0, 0, mq.Filters, mq.GroupBy, mq.AggregateAttribute, true)
+	resourceSubQuery, err := resource.BuildResourceSubQuery(dbName(), DISTRIBUTED_LOGS_V2_RESOURCE, 0, 0, mq.Filters, mq.GroupBy, mq.AggregateAttribute, true)
 	if err != nil {
 		return "", err
 	}

@@ -25,6 +25,7 @@ func resourceFilterStmtBuilder() qbtypes.StatementBuilder[qbtypes.TraceAggregati
 		fm,
 		cb,
 		mockMetadataStore,
+		DBName(),
 	)
 }
 

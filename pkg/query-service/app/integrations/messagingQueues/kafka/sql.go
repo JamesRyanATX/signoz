@@ -2,6 +2,8 @@ package kafka
 
 import (
 	"fmt"
+
+	"github.com/SigNoz/signoz/pkg/telemetrytraces"
 )
 
 func generateConsumerSQL(start, end int64, topic, partition, consumerGroup, queueType string) string {
@@ -16,7 +18,7 @@ WITH consumer_query AS (
         COUNT(*) AS total_requests,
         sumIf(1, status_code = 2) AS error_count,
         avg(CASE WHEN has(attributes_number, 'messaging.message.body.size') THEN attributes_number['messaging.message.body.size'] ELSE NULL END) AS avg_msg_size
-    FROM signoz_traces.distributed_signoz_index_v3
+    FROM %s.distributed_signoz_index_v3
     WHERE
         timestamp >= '%d'
         AND timestamp <= '%d'
@@ -40,7 +42,7 @@ FROM
     consumer_query
 ORDER BY
     resource_string_service$$name;
-`, start, end, tsBucketStart, tsBucketEnd, queueType, topic, partition, consumerGroup, timeRange)
+`, telemetrytraces.DBName(), start, end, tsBucketStart, tsBucketEnd, queueType, topic, partition, consumerGroup, timeRange)
 	return query
 }
 
@@ -56,7 +58,7 @@ WITH partition_query AS (
         count(*) AS total_requests,
         attributes_string['messaging.destination.name'] AS topic,
 		attributes_string['messaging.destination.partition.id'] AS partition
-    FROM signoz_traces.distributed_signoz_index_v3
+    FROM %s.distributed_signoz_index_v3
     WHERE
         timestamp >= '%d'
         AND timestamp <= '%d'
@@ -76,7 +78,7 @@ FROM
     partition_query
 ORDER BY
     topic;
-`, start, end, tsBucketStart, tsBucketEnd, queueType, timeRange)
+`, telemetrytraces.DBName(), start, end, tsBucketStart, tsBucketEnd, queueType, timeRange)
 	return query
 }
 
@@ -93,7 +95,7 @@ WITH consumer_pl AS (
         quantile(0.99)(durationNano) / 1000000 AS p99,
         COUNT(*) AS total_requests,
         sumIf(1, status_code = 2) AS error_count
-    FROM signoz_traces.distributed_signoz_index_v3
+    FROM %s.distributed_signoz_index_v3
     WHERE
         timestamp >= '%d'
         AND timestamp <= '%d'
@@ -116,7 +118,7 @@ FROM
     consumer_pl
 ORDER BY
     consumer_group;
-`, start, end, tsBucketStart, tsBucketEnd, queueType, topic, partition, timeRange)
+`, telemetrytraces.DBName(), start, end, tsBucketStart, tsBucketEnd, queueType, topic, partition, timeRange)
 	return query
 }
 
@@ -133,7 +135,7 @@ WITH producer_latency AS (
 		attributes_string['messaging.destination.name'] AS topic,
         COUNT(*) AS total_requests,
         sumIf(1, status_code = 2) AS error_count
-    FROM signoz_traces.distributed_signoz_index_v3
+    FROM %s.distributed_signoz_index_v3
     WHERE
         timestamp >= '%d'
         AND timestamp <= '%d'
@@ -152,7 +154,7 @@ SELECT
     COALESCE(total_requests / %d, 0) AS throughput
 FROM
     producer_latency
-`, start, end, tsBucketStart, tsBucketEnd, queueType, timeRange)
+`, telemetrytraces.DBName(), start, end, tsBucketStart, tsBucketEnd, queueType, timeRange)
 	return query
 }
 
@@ -168,7 +170,7 @@ WITH consumer_latency AS (
 		attributes_string['messaging.destination.partition.id'] AS partition,
         COUNT(*) AS total_requests,
         sumIf(1, status_code = 2) AS error_count
-    FROM signoz_traces.distributed_signoz_index_v3
+    FROM %s.distributed_signoz_index_v3
     WHERE
         timestamp >= '%d'
         AND timestamp <= '%d'
@@ -188,7 +190,7 @@ SELECT
     COALESCE(total_requests / %d, 0) AS throughput
 FROM
     consumer_latency
-`, start, end, tsBucketStart, tsBucketEnd, service, queueType, topic, timeRange)
+`, telemetrytraces.DBName(), start, end, tsBucketStart, tsBucketEnd, service, queueType, topic, timeRange)
 	return query
 }
 
@@ -206,7 +208,7 @@ WITH consumer_latency AS (
         COUNT(*) AS total_requests,
         sumIf(1, status_code = 2) AS error_count,
         SUM(attributes_number['messaging.message.body.size']) AS total_bytes
-    FROM signoz_traces.distributed_signoz_index_v3
+    FROM %s.distributed_signoz_index_v3
     WHERE
         timestamp >= '%d'
         AND timestamp <= '%d'
@@ -228,7 +230,7 @@ FROM
     consumer_latency
 ORDER BY
     topic;
-`, start, end, tsBucketStart, tsBucketEnd, queueType, timeRange, timeRange)
+`, telemetrytraces.DBName(), start, end, tsBucketStart, tsBucketEnd, queueType, timeRange, timeRange)
 	return query
 }
 
@@ -244,7 +246,7 @@ WITH consumer_latency AS (
 		attributes_string['messaging.destination.partition.id'] AS partition,
         COUNT(*) AS total_requests,
         sumIf(1, status_code = 2) AS error_count
-    FROM signoz_traces.distributed_signoz_index_v3
+    FROM %s.distributed_signoz_index_v3
     WHERE
         timestamp >= '%d'
         AND timestamp <= '%d'
@@ -264,7 +266,7 @@ SELECT
     COALESCE(total_requests / %d, 0) AS throughput
 FROM
     consumer_latency
-`, start, end, tsBucketStart, tsBucketEnd, service, queueType, topic, timeRange)
+`, telemetrytraces.DBName(), start, end, tsBucketStart, tsBucketEnd, service, queueType, topic, timeRange)
 	return query
 }
 
@@ -281,9 +283,9 @@ WITH trace_data AS (
         p.durationNano AS durationNano,
         (toUnixTimestamp64Nano(c.timestamp) - toUnixTimestamp64Nano(p.timestamp)) + p.durationNano AS time_difference
     FROM
-        signoz_traces.distributed_signoz_index_v3 p
+        %s.distributed_signoz_index_v3 p
     GLOBAL INNER JOIN
-        signoz_traces.distributed_signoz_index_v3 c
+        %s.distributed_signoz_index_v3 c
             ON p.trace_id = c.trace_id
             AND c.parent_span_id = p.span_id
     WHERE
@@ -314,7 +316,7 @@ FROM trace_data
 GROUP BY
     producer_service,
     consumer_service
-`, start, end, start, end, queueType, queueType, evalTime, evalTime)
+`, telemetrytraces.DBName(), telemetrytraces.DBName(), start, end, start, end, queueType, queueType, evalTime, evalTime)
 	return query
 }
 
@@ -329,7 +331,7 @@ WITH producer_query AS (
         quantile(0.99)(durationNano) / 1000000 AS p99,
         count(*) AS total_count,
         sumIf(1, status_code = 2) AS error_count
-    FROM signoz_traces.distributed_signoz_index_v3
+    FROM %s.distributed_signoz_index_v3
     WHERE
         timestamp >= '%d'
         AND timestamp <= '%d'
@@ -351,7 +353,7 @@ FROM
     producer_query
 ORDER BY
     resource_string_service$$name;
-`, start, end, tsBucketStart, tsBucketEnd, queueType, topic, partition, timeRange)
+`, telemetrytraces.DBName(), start, end, tsBucketStart, tsBucketEnd, queueType, topic, partition, timeRange)
 	return query
 }
 
@@ -365,19 +367,19 @@ SELECT
 	resources_string['service.instance.id'] AS service_instance_id,
     resource_string_service$$name AS service_name,
     count(*) / %d AS throughput
-FROM signoz_traces.distributed_signoz_index_v3
+FROM %s.distributed_signoz_index_v3
 WHERE
     timestamp >= '%d'
     AND timestamp <= '%d'
     AND ts_bucket_start >=  '%d'
     AND ts_bucket_start <= '%d'
     AND kind = 5
-    AND attribute_string_messaging$$system = '%s' 
+    AND attribute_string_messaging$$system = '%s'
     AND attributes_string['messaging.kafka.consumer.group'] = '%s'
     AND attributes_string['messaging.destination.partition.id'] = '%s'
 GROUP BY service_name, client_id, service_instance_id
 ORDER BY throughput DESC
-`, timeRange, start, end, tsBucketStart, tsBucketEnd, queueType, consumerGroup, partitionID)
+`, timeRange, telemetrytraces.DBName(), start, end, tsBucketStart, tsBucketEnd, queueType, consumerGroup, partitionID)
 	return query
 }
 
@@ -385,19 +387,19 @@ func onboardProducersSQL(start, end int64, queueType string) string {
 	tsBucketStart := (start / 1000000000) - 1800
 	tsBucketEnd := end / 1000000000
 	query := fmt.Sprintf(`
-SELECT 
+SELECT
     COUNT(*) = 0 AS entries,
     COUNT(IF(attribute_string_messaging$$system = '%s', 1, NULL)) = 0 AS queue,
     COUNT(IF(kind = 4, 1, NULL)) = 0 AS kind,
     COUNT(IF(has(attributes_string, 'messaging.destination.name'), 1, NULL)) = 0 AS destination,
     COUNT(IF(has(attributes_string, 'messaging.destination.partition.id'), 1, NULL)) = 0 AS partition
-FROM 
-    signoz_traces.distributed_signoz_index_v3
-WHERE 
+FROM
+    %s.distributed_signoz_index_v3
+WHERE
     timestamp >= '%d'
     AND timestamp <= '%d'
     AND ts_bucket_start >=  '%d'
-    AND ts_bucket_start <= '%d';`, queueType, start, end, tsBucketStart, tsBucketEnd)
+    AND ts_bucket_start <= '%d';`, queueType, telemetrytraces.DBName(), start, end, tsBucketStart, tsBucketEnd)
 	return query
 }
 
@@ -405,7 +407,7 @@ func onboardConsumerSQL(start, end int64, queueType string) string {
 	tsBucketStart := (start / 1000000000) - 1800
 	tsBucketEnd := end / 1000000000
 	query := fmt.Sprintf(`
-SELECT  
+SELECT
     COUNT(*) = 0 AS entries,
     COUNT(IF(attribute_string_messaging$$system = '%s', 1, NULL)) = 0 AS queue,
     COUNT(IF(kind = 5, 1, NULL)) = 0 AS kind,
@@ -416,11 +418,11 @@ SELECT
     COUNT(IF(has(attributes_number, 'messaging.message.body.size'), 1, NULL)) = 0 AS bodysize,
     COUNT(IF(has(attributes_string, 'messaging.client_id'), 1, NULL)) = 0 AS clientid,
     COUNT(IF(has(resources_string, 'service.instance.id'), 1, NULL)) = 0 AS instanceid
-FROM signoz_traces.distributed_signoz_index_v3
-WHERE 
+FROM %s.distributed_signoz_index_v3
+WHERE
     timestamp >= '%d'
     AND timestamp <= '%d'
     AND ts_bucket_start >=  '%d'
-    AND ts_bucket_start <= '%d'	;`, queueType, start, end, tsBucketStart, tsBucketEnd)
+    AND ts_bucket_start <= '%d'	;`, queueType, telemetrytraces.DBName(), start, end, tsBucketStart, tsBucketEnd)
 	return query
 }
