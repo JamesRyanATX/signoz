@@ -35,6 +35,27 @@ type ClickhouseConfig struct {
 	// Cluster is the cluster name to use for clickhouse.
 	Cluster string `mapstructure:"cluster"`
 
+	// TraceDatabase is the name of the traces database.
+	TraceDatabase string `mapstructure:"trace_database"`
+
+	// MetricsDatabase is the name of the metrics database.
+	MetricsDatabase string `mapstructure:"metrics_database"`
+
+	// LogsDatabase is the name of the logs database.
+	LogsDatabase string `mapstructure:"logs_database"`
+
+	// MeterDatabase is the name of the meter database.
+	MeterDatabase string `mapstructure:"meter_database"`
+
+	// MetadataDatabase is the name of the metadata database.
+	MetadataDatabase string `mapstructure:"metadata_database"`
+
+	// AnalyticsDatabase is the name of the analytics database.
+	AnalyticsDatabase string `mapstructure:"analytics_database"`
+
+	// AuditDatabase is the name of the audit database.
+	AuditDatabase string `mapstructure:"audit_database"`
+
 	// QuerySettings is the query settings for clickhouse.
 	QuerySettings QuerySettings `mapstructure:"settings"`
 }
@@ -62,8 +83,15 @@ func newConfig() factory.Config {
 			DialTimeout:  5 * time.Second,
 		},
 		Clickhouse: ClickhouseConfig{
-			DSN:     "tcp://localhost:9000",
-			Cluster: "cluster",
+			DSN:               "tcp://localhost:9000",
+			Cluster:           "cluster",
+			TraceDatabase:     DefaultTraceDatabase,
+			MetricsDatabase:   DefaultMetricsDatabase,
+			LogsDatabase:      DefaultLogsDatabase,
+			MeterDatabase:     DefaultMeterDatabase,
+			MetadataDatabase:  DefaultMetadataDatabase,
+			AnalyticsDatabase: DefaultAnalyticsDatabase,
+			AuditDatabase:     DefaultAuditDatabase,
 		},
 	}
 

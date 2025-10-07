@@ -5,8 +5,15 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/SigNoz/signoz/pkg/analytics"
 	"github.com/SigNoz/signoz/pkg/factory"
+	"github.com/SigNoz/signoz/pkg/telemetryaudit"
+	"github.com/SigNoz/signoz/pkg/telemetrylogs"
+	"github.com/SigNoz/signoz/pkg/telemetrymetadata"
+	"github.com/SigNoz/signoz/pkg/telemetrymeter"
+	"github.com/SigNoz/signoz/pkg/telemetrymetrics"
 	"github.com/SigNoz/signoz/pkg/telemetrystore"
+	"github.com/SigNoz/signoz/pkg/telemetrytraces"
 )
 
 type provider struct {
@@ -24,6 +31,15 @@ func NewFactory(hookFactories ...factory.ProviderFactory[telemetrystore.Telemetr
 
 func New(ctx context.Context, providerSettings factory.ProviderSettings, config telemetrystore.Config, hookFactories ...factory.ProviderFactory[telemetrystore.TelemetryStoreHook, telemetrystore.Config]) (telemetrystore.TelemetryStore, error) {
 	settings := factory.NewScopedProviderSettings(providerSettings, "github.com/SigNoz/signoz/pkg/telemetrystore/clickhousetelemetrystore")
+
+	// Initialize database names from config
+	telemetrytraces.Init(config.Clickhouse.TraceDatabase)
+	telemetrymetrics.Init(config.Clickhouse.MetricsDatabase)
+	telemetrylogs.Init(config.Clickhouse.LogsDatabase)
+	telemetrymeter.Init(config.Clickhouse.MeterDatabase)
+	telemetrymetadata.Init(config.Clickhouse.MetadataDatabase)
+	analytics.Init(config.Clickhouse.AnalyticsDatabase)
+	telemetryaudit.Init(config.Clickhouse.AuditDatabase)
 
 	options, err := clickhouse.ParseDSN(config.Clickhouse.DSN)
 	if err != nil {

@@ -115,7 +115,7 @@ func (b *traceOperatorCTEBuilder) buildAllSpansCTE(ctx context.Context) {
 	sb.Select("*")
 	sb.SelectMore(sqlbuilder.Escape("resource_string_service$$name") + " AS `service.name`")
 
-	sb.From(fmt.Sprintf("%s.%s", DBName, SpanIndexV3TableName))
+	sb.From(fmt.Sprintf("%s.%s", DBName(), SpanIndexV3TableName))
 	startBucket := b.start/querybuilder.NsToSeconds - querybuilder.BucketAdjustment
 	endBucket := b.end / querybuilder.NsToSeconds
 	sb.Where(
@@ -216,7 +216,7 @@ func (b *traceOperatorCTEBuilder) buildQueryCTE(ctx context.Context, queryName s
 
 	sb := sqlbuilder.NewSelectBuilder()
 	sb.Select("*")
-	sb.From(fmt.Sprintf("%s.%s", DBName, SpanIndexV3TableName))
+	sb.From(fmt.Sprintf("%s.%s", DBName(), SpanIndexV3TableName))
 	if resourceFilterCTEName != "" {
 		sb.Where(fmt.Sprintf("resource_fingerprint GLOBAL IN (SELECT fingerprint FROM %s)", resourceFilterCTEName))
 	}

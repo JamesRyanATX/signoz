@@ -314,6 +314,37 @@ func mergeAndEnsureBackwardCompatibility(ctx context.Context, logger *slog.Logge
 			logger.WarnContext(ctx, "Error parsing RULES_EVAL_DELAY, using default value of 2m")
 		}
 	}
+
+	// Backward compatibility for legacy database name environment variables
+	if os.Getenv("CLICKHOUSE_TRACE_DATABASE") != "" {
+		logger.WarnContext(ctx, "[Deprecated] env CLICKHOUSE_TRACE_DATABASE is deprecated and scheduled for removal. Please use SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_TRACE__DATABASE instead.")
+		config.TelemetryStore.Clickhouse.TraceDatabase = os.Getenv("CLICKHOUSE_TRACE_DATABASE")
+	}
+
+	if os.Getenv("CLICKHOUSE_DATABASE") != "" {
+		logger.WarnContext(ctx, "[Deprecated] env CLICKHOUSE_DATABASE is deprecated and scheduled for removal. Please use SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_METRICS__DATABASE instead.")
+		config.TelemetryStore.Clickhouse.MetricsDatabase = os.Getenv("CLICKHOUSE_DATABASE")
+	}
+
+	if os.Getenv("CLICKHOUSE_LOG_DATABASE") != "" {
+		logger.WarnContext(ctx, "[Deprecated] env CLICKHOUSE_LOG_DATABASE is deprecated and scheduled for removal. Please use SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_LOGS__DATABASE instead.")
+		config.TelemetryStore.Clickhouse.LogsDatabase = os.Getenv("CLICKHOUSE_LOG_DATABASE")
+	}
+
+	if os.Getenv("CLICKHOUSE_METER_DATABASE") != "" {
+		logger.WarnContext(ctx, "[Deprecated] env CLICKHOUSE_METER_DATABASE is deprecated and scheduled for removal. Please use SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_METER__DATABASE instead.")
+		config.TelemetryStore.Clickhouse.MeterDatabase = os.Getenv("CLICKHOUSE_METER_DATABASE")
+	}
+
+	if os.Getenv("CLICKHOUSE_ANALYTICS_DATABASE") != "" {
+		logger.WarnContext(ctx, "[Deprecated] env CLICKHOUSE_ANALYTICS_DATABASE is deprecated and scheduled for removal. Please use SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_ANALYTICS__DATABASE instead.")
+		config.TelemetryStore.Clickhouse.AnalyticsDatabase = os.Getenv("CLICKHOUSE_ANALYTICS_DATABASE")
+	}
+
+	if os.Getenv("CLICKHOUSE_AUDIT_DATABASE") != "" {
+		logger.WarnContext(ctx, "[Deprecated] env CLICKHOUSE_AUDIT_DATABASE is deprecated and scheduled for removal. Please use SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_AUDIT__DATABASE instead.")
+		config.TelemetryStore.Clickhouse.AuditDatabase = os.Getenv("CLICKHOUSE_AUDIT_DATABASE")
+	}
 }
 
 func (config Config) Collect(_ context.Context, _ valuer.UUID) (map[string]any, error) {

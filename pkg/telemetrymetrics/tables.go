@@ -8,8 +8,22 @@ import (
 	"github.com/SigNoz/signoz/pkg/types/metrictypes"
 )
 
+var dbName string
+
+func Init(databaseName string) {
+	if databaseName != "" {
+		dbName = databaseName
+	}
+}
+
+func DBName() string {
+	if dbName != "" {
+		return dbName
+	}
+	return "signoz_metrics"
+}
+
 const (
-	DBName                           = "signoz_metrics"
 	UpdatedMetadataTableName         = "distributed_updated_metadata"
 	UpdatedMetadataLocalTableName    = "updated_metadata"
 	SamplesV4TableName               = "distributed_samples_v4"

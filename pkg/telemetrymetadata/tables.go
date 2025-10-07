@@ -2,8 +2,22 @@ package telemetrymetadata
 
 import otelconst "github.com/SigNoz/signoz-otel-collector/constants"
 
+var dbName string
+
+func Init(databaseName string) {
+	if databaseName != "" {
+		dbName = databaseName
+	}
+}
+
+func DBName() string {
+	if dbName != "" {
+		return dbName
+	}
+	return "signoz_metadata"
+}
+
 const (
-	DBName                           = "signoz_metadata"
 	AttributesMetadataTableName      = "distributed_attributes_metadata"
 	AttributesMetadataLocalTableName = "attributes_metadata"
 	ColumnEvolutionMetadataTableName = "distributed_column_evolution_metadata"

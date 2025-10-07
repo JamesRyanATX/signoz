@@ -1,14 +1,21 @@
 package clickhouseprometheus
 
-import "time"
+import (
+	"time"
+
+	"github.com/SigNoz/signoz/pkg/telemetrymetrics"
+)
 
 const (
-	databaseName                string = "signoz_metrics"
 	distributedTimeSeriesV4     string = "distributed_time_series_v4"
 	distributedTimeSeriesV46hrs string = "distributed_time_series_v4_6hrs"
 	distributedTimeSeriesV41day string = "distributed_time_series_v4_1day"
 	distributedSamplesV4        string = "distributed_samples_v4"
 )
+
+func databaseName() string {
+	return telemetrymetrics.DBName()
+}
 
 var (
 	sixHoursInMilliseconds = time.Hour.Milliseconds() * 6

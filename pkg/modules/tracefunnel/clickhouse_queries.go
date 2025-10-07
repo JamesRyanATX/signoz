@@ -3,6 +3,8 @@ package tracefunnel
 import (
 	"fmt"
 	"strings"
+
+	"github.com/SigNoz/signoz/pkg/telemetrytraces"
 )
 
 // BuildFunnelValidationQuery builds a validation query for n-step funnels.
@@ -57,7 +59,7 @@ SELECT
 FROM (
     SELECT
         %s
-    FROM signoz_traces.distributed_signoz_index_v3
+    FROM %s.distributed_signoz_index_v3
     WHERE
         %s
     GROUP BY trace_id
@@ -69,6 +71,7 @@ LIMIT 5;`
 	return fmt.Sprintf(queryTemplate,
 		strings.Join(withParts, ",\n    "),
 		strings.Join(selectFields, ",\n        "),
+		telemetrytraces.DBName(),
 		strings.Join(whereConditions, "\n        AND "),
 	)
 }
@@ -182,7 +185,7 @@ WITH
 , funnel AS (
     SELECT
         %s
-    FROM signoz_traces.distributed_signoz_index_v3
+    FROM %s.distributed_signoz_index_v3
     WHERE
         %s
     GROUP BY trace_id
@@ -207,6 +210,7 @@ FROM totals;
 	return fmt.Sprintf(queryTemplate,
 		strings.Join(withParts, ",\n    "),
 		strings.Join(funnelSelectFields, ",\n        "),
+		telemetrytraces.DBName(),
 		strings.Join(whereConditions, "\n        AND "),
 		strings.Join(havingConditions, " AND "),
 		strings.Join(conversionFields, ",\n        "),
@@ -297,7 +301,7 @@ SELECT
 FROM (
     SELECT
         %s
-    FROM signoz_traces.distributed_signoz_index_v3
+    FROM %s.distributed_signoz_index_v3
     WHERE
         %s
     GROUP BY trace_id
@@ -309,6 +313,7 @@ FROM (
 		strings.Join(withParts, ",\n    "),
 		strings.Join(selectFields, ",\n    "),
 		strings.Join(funnelSelectFields, ",\n        "),
+		telemetrytraces.DBName(),
 		strings.Join(whereConditions, "\n        AND "),
 	)
 }
@@ -431,7 +436,7 @@ FROM (
     FROM (
         SELECT
             %s
-        FROM signoz_traces.distributed_signoz_index_v3
+        FROM %s.distributed_signoz_index_v3
         WHERE
             %s
         GROUP BY trace_id
@@ -455,6 +460,7 @@ FROM (
 		stepEnd, stepStart, // latency calculation
 		stepStart, conversionCondition,
 		strings.Join(funnelSelectFields, ",\n            "),
+		telemetrytraces.DBName(),
 		strings.Join(whereConditions, "\n            AND "),
 		stepStart,
 	)
@@ -506,7 +512,7 @@ FROM (
         %[11]s AS t1_time,
         %[12]s AS t2_time,
         count() AS span_count
-    FROM signoz_traces.distributed_signoz_index_v3
+    FROM %s.distributed_signoz_index_v3
     WHERE
         timestamp BETWEEN start_ts AND end_ts
         AND (
@@ -533,6 +539,7 @@ LIMIT 5;
 		clauseStep2,
 		t1TimeExpr,
 		t2TimeExpr,
+		telemetrytraces.DBName(),
 	)
 }
 
@@ -584,7 +591,7 @@ FROM (
         toUInt8(anyIf(has_error, resource_string_service$$name = step1.1 AND name = step1.2)) AS t1_error,
         toUInt8(anyIf(has_error, resource_string_service$$name = step2.1 AND name = step2.2)) AS t2_error,
         count() AS span_count
-    FROM signoz_traces.distributed_signoz_index_v3
+    FROM %s.distributed_signoz_index_v3
     WHERE
         timestamp BETWEEN start_ts AND end_ts
         AND (
@@ -613,5 +620,6 @@ LIMIT 5;
 		clauseStep2,
 		t1TimeExpr,
 		t2TimeExpr,
+		telemetrytraces.DBName(),
 	)
 }

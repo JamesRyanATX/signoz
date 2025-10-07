@@ -2,6 +2,7 @@ package analyticsstatsreporter
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -16,7 +17,10 @@ import (
 	"github.com/SigNoz/signoz/pkg/modules/organization"
 	"github.com/SigNoz/signoz/pkg/modules/user"
 	"github.com/SigNoz/signoz/pkg/statsreporter"
+	"github.com/SigNoz/signoz/pkg/telemetrylogs"
+	"github.com/SigNoz/signoz/pkg/telemetrymetrics"
 	"github.com/SigNoz/signoz/pkg/telemetrystore"
+	"github.com/SigNoz/signoz/pkg/telemetrytraces"
 	"github.com/SigNoz/signoz/pkg/tokenizer"
 	"github.com/SigNoz/signoz/pkg/types"
 	"github.com/SigNoz/signoz/pkg/types/ctxtypes"
@@ -236,22 +240,22 @@ func (provider *provider) collectOrg(ctx context.Context, orgID valuer.UUID) map
 	wg.Wait()
 
 	var traces uint64
-	if err := provider.telemetryStore.ClickhouseDB().QueryRow(ctx, "SELECT COUNT(*) FROM signoz_traces.distributed_signoz_index_v3").Scan(&traces); err == nil {
+	if err := provider.telemetryStore.ClickhouseDB().QueryRow(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %s.distributed_signoz_index_v3", telemetrytraces.DBName())).Scan(&traces); err == nil {
 		stats["telemetry.traces.count"] = traces
 	}
 
 	var logs uint64
-	if err := provider.telemetryStore.ClickhouseDB().QueryRow(ctx, "SELECT COUNT(*) FROM signoz_logs.distributed_logs_v2").Scan(&logs); err == nil {
+	if err := provider.telemetryStore.ClickhouseDB().QueryRow(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %s.distributed_logs_v2", telemetrylogs.DBName())).Scan(&logs); err == nil {
 		stats["telemetry.logs.count"] = logs
 	}
 
 	var metrics uint64
-	if err := provider.telemetryStore.ClickhouseDB().QueryRow(ctx, "SELECT COUNT(*) FROM signoz_metrics.distributed_samples_v4").Scan(&metrics); err == nil {
+	if err := provider.telemetryStore.ClickhouseDB().QueryRow(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %s.distributed_samples_v4", telemetrymetrics.DBName())).Scan(&metrics); err == nil {
 		stats["telemetry.metrics.count"] = metrics
 	}
 
 	var tracesLastSeenAt time.Time
-	if err := provider.telemetryStore.ClickhouseDB().QueryRow(ctx, "SELECT max(timestamp) FROM signoz_traces.distributed_signoz_index_v3").Scan(&tracesLastSeenAt); err == nil {
+	if err := provider.telemetryStore.ClickhouseDB().QueryRow(ctx, fmt.Sprintf("SELECT max(timestamp) FROM %s.distributed_signoz_index_v3", telemetrytraces.DBName())).Scan(&tracesLastSeenAt); err == nil {
 		if tracesLastSeenAt.Unix() != 0 {
 			stats["telemetry.traces.last_observed.time"] = tracesLastSeenAt.UTC()
 			stats["telemetry.traces.last_observed.time_unix"] = tracesLastSeenAt.Unix()
@@ -259,7 +263,7 @@ func (provider *provider) collectOrg(ctx context.Context, orgID valuer.UUID) map
 	}
 
 	var logsLastSeenAt time.Time
-	if err := provider.telemetryStore.ClickhouseDB().QueryRow(ctx, "SELECT fromUnixTimestamp64Nano(max(timestamp)) FROM signoz_logs.distributed_logs_v2").Scan(&logsLastSeenAt); err == nil {
+	if err := provider.telemetryStore.ClickhouseDB().QueryRow(ctx, fmt.Sprintf("SELECT fromUnixTimestamp64Nano(max(timestamp)) FROM %s.distributed_logs_v2", telemetrylogs.DBName())).Scan(&logsLastSeenAt); err == nil {
 		if logsLastSeenAt.Unix() != 0 {
 			stats["telemetry.logs.last_observed.time"] = logsLastSeenAt.UTC()
 			stats["telemetry.logs.last_observed.time_unix"] = logsLastSeenAt.Unix()
@@ -267,7 +271,7 @@ func (provider *provider) collectOrg(ctx context.Context, orgID valuer.UUID) map
 	}
 
 	var metricsLastSeenAt time.Time
-	if err := provider.telemetryStore.ClickhouseDB().QueryRow(ctx, "SELECT toDateTime(max(unix_milli) / 1000) FROM signoz_metrics.distributed_samples_v4").Scan(&metricsLastSeenAt); err == nil {
+	if err := provider.telemetryStore.ClickhouseDB().QueryRow(ctx, fmt.Sprintf("SELECT toDateTime(max(unix_milli) / 1000) FROM %s.distributed_samples_v4", telemetrymetrics.DBName())).Scan(&metricsLastSeenAt); err == nil {
 		if metricsLastSeenAt.Unix() != 0 {
 			stats["telemetry.metrics.last_observed.time"] = metricsLastSeenAt.UTC()
 			stats["telemetry.metrics.last_observed.time_unix"] = metricsLastSeenAt.Unix()

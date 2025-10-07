@@ -1,7 +1,21 @@
 package telemetrylogs
 
+var dbName string
+
+func Init(databaseName string) {
+	if databaseName != "" {
+		dbName = databaseName
+	}
+}
+
+func DBName() string {
+	if dbName != "" {
+		return dbName
+	}
+	return "signoz_logs"
+}
+
 const (
-	DBName                        = "signoz_logs"
 	LogsV2TableName               = "distributed_logs_v2"
 	LogsV2LocalTableName          = "logs_v2"
 	TagAttributesV2TableName      = "distributed_tag_attributes_v2"

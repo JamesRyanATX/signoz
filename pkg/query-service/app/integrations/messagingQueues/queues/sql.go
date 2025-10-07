@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/SigNoz/signoz/pkg/telemetrytraces"
 	v3 "github.com/SigNoz/signoz/pkg/query-service/model/v3"
 	format "github.com/SigNoz/signoz/pkg/query-service/utils"
 )
@@ -65,7 +66,7 @@ WITH
             ) AS destination,
             durationNano,
             status_code
-        FROM signoz_traces.distributed_signoz_index_v3
+        FROM %s.distributed_signoz_index_v3
         WHERE
             ts_bucket_start >= toDateTime64(%f, 9)
             AND ts_bucket_start <= toDateTime64(%f, 9)
@@ -109,7 +110,8 @@ FROM
 ORDER BY
     aggregated_metrics.service_name,
     aggregated_metrics.span_name;
-`, tsBucketStart, tsBucketEnd,
+`, telemetrytraces.DBName(),
+		tsBucketStart, tsBucketEnd,
 		whereSQL, timeRangeSecs,
 	)
 

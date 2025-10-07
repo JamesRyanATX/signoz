@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/uptrace/bun"
@@ -12,7 +13,9 @@ import (
 	"github.com/SigNoz/signoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/factory"
 	"github.com/SigNoz/signoz/pkg/sqlstore"
+	"github.com/SigNoz/signoz/pkg/telemetrylogs"
 	"github.com/SigNoz/signoz/pkg/telemetrystore"
+	"github.com/SigNoz/signoz/pkg/telemetrytraces"
 	"github.com/SigNoz/signoz/pkg/transition"
 )
 
@@ -50,14 +53,14 @@ func (migration *queryBuilderV5Migration) Register(migrations *migrate.Migration
 }
 
 func (migration *queryBuilderV5Migration) getTraceDuplicateKeys(ctx context.Context) ([]string, error) {
-	query := `
+	query := fmt.Sprintf(`
 		SELECT tagKey
-		FROM signoz_traces.distributed_span_attributes_keys
+		FROM %s.distributed_span_attributes_keys
 		WHERE tagType IN ('tag', 'resource')
 		GROUP BY tagKey
 		HAVING COUNT(DISTINCT tagType) > 1
 		ORDER BY tagKey
-	`
+	`, telemetrytraces.DBName())
 
 	rows, err := migration.telemetryStore.ClickhouseDB().Query(ctx, query)
 	if err != nil {
@@ -80,15 +83,15 @@ func (migration *queryBuilderV5Migration) getTraceDuplicateKeys(ctx context.Cont
 }
 
 func (migration *queryBuilderV5Migration) getLogDuplicateKeys(ctx context.Context) ([]string, error) {
-	query := `
+	query := fmt.Sprintf(`
 		SELECT name
 		FROM (
-			SELECT DISTINCT name FROM signoz_logs.distributed_logs_attribute_keys
+			SELECT DISTINCT name FROM %s.distributed_logs_attribute_keys
 			INTERSECT
-			SELECT DISTINCT name FROM signoz_logs.distributed_logs_resource_keys
+			SELECT DISTINCT name FROM %s.distributed_logs_resource_keys
 		)
 		ORDER BY name
-	`
+	`, telemetrylogs.DBName(), telemetrylogs.DBName())
 
 	rows, err := migration.telemetryStore.ClickhouseDB().Query(ctx, query)
 	if err != nil {

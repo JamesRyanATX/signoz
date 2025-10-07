@@ -89,3 +89,165 @@ func TestNewWithEnvProviderWithQuerySettings(t *testing.T) {
 
 	assert.Equal(t, expected.Clickhouse.QuerySettings, actual.Clickhouse.QuerySettings)
 }
+
+func TestDatabaseNamesWithEnvProvider(t *testing.T) {
+	t.Setenv("SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_TRACE__DATABASE", "custom_traces")
+	t.Setenv("SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_METRICS__DATABASE", "custom_metrics")
+	t.Setenv("SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_LOGS__DATABASE", "custom_logs")
+	t.Setenv("SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_METER__DATABASE", "custom_meter")
+	t.Setenv("SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_METADATA__DATABASE", "custom_metadata")
+	t.Setenv("SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_ANALYTICS__DATABASE", "custom_analytics")
+
+	conf, err := config.New(
+		context.Background(),
+		config.ResolverConfig{
+			Uris: []string{"env:"},
+			ProviderFactories: []config.ProviderFactory{
+				envprovider.NewFactory(),
+			},
+		},
+		[]factory.ConfigFactory{
+			NewConfigFactory(),
+		},
+	)
+	require.NoError(t, err)
+
+	actual := Config{}
+	err = conf.Unmarshal("telemetrystore", &actual)
+	require.NoError(t, err)
+
+	assert.Equal(t, "custom_traces", actual.Clickhouse.TraceDatabase)
+	assert.Equal(t, "custom_metrics", actual.Clickhouse.MetricsDatabase)
+	assert.Equal(t, "custom_logs", actual.Clickhouse.LogsDatabase)
+	assert.Equal(t, "custom_meter", actual.Clickhouse.MeterDatabase)
+	assert.Equal(t, "custom_metadata", actual.Clickhouse.MetadataDatabase)
+	assert.Equal(t, "custom_analytics", actual.Clickhouse.AnalyticsDatabase)
+}
+
+func TestDatabaseNamesDefaults(t *testing.T) {
+	conf, err := config.New(
+		context.Background(),
+		config.ResolverConfig{
+			Uris: []string{"env:"},
+			ProviderFactories: []config.ProviderFactory{
+				envprovider.NewFactory(),
+			},
+		},
+		[]factory.ConfigFactory{
+			NewConfigFactory(),
+		},
+	)
+	require.NoError(t, err)
+
+	actual := Config{}
+	err = conf.Unmarshal("telemetrystore", &actual)
+	require.NoError(t, err)
+
+	assert.Equal(t, DefaultTraceDatabase, actual.Clickhouse.TraceDatabase)
+	assert.Equal(t, DefaultMetricsDatabase, actual.Clickhouse.MetricsDatabase)
+	assert.Equal(t, DefaultLogsDatabase, actual.Clickhouse.LogsDatabase)
+	assert.Equal(t, DefaultMeterDatabase, actual.Clickhouse.MeterDatabase)
+	assert.Equal(t, DefaultMetadataDatabase, actual.Clickhouse.MetadataDatabase)
+	assert.Equal(t, DefaultAnalyticsDatabase, actual.Clickhouse.AnalyticsDatabase)
+}
+
+func TestIndividualDatabaseNames(t *testing.T) {
+	tests := []struct {
+		name         string
+		envVar       string
+		envValue     string
+		expectedFunc func(Config) string
+		defaultValue string
+	}{
+		{
+			name:         "TraceDatabase",
+			envVar:       "SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_TRACE__DATABASE",
+			envValue:     "test_traces",
+			expectedFunc: func(c Config) string { return c.Clickhouse.TraceDatabase },
+			defaultValue: DefaultTraceDatabase,
+		},
+		{
+			name:         "MetricsDatabase",
+			envVar:       "SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_METRICS__DATABASE",
+			envValue:     "test_metrics",
+			expectedFunc: func(c Config) string { return c.Clickhouse.MetricsDatabase },
+			defaultValue: DefaultMetricsDatabase,
+		},
+		{
+			name:         "LogsDatabase",
+			envVar:       "SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_LOGS__DATABASE",
+			envValue:     "test_logs",
+			expectedFunc: func(c Config) string { return c.Clickhouse.LogsDatabase },
+			defaultValue: DefaultLogsDatabase,
+		},
+		{
+			name:         "MeterDatabase",
+			envVar:       "SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_METER__DATABASE",
+			envValue:     "test_meter",
+			expectedFunc: func(c Config) string { return c.Clickhouse.MeterDatabase },
+			defaultValue: DefaultMeterDatabase,
+		},
+		{
+			name:         "MetadataDatabase",
+			envVar:       "SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_METADATA__DATABASE",
+			envValue:     "test_metadata",
+			expectedFunc: func(c Config) string { return c.Clickhouse.MetadataDatabase },
+			defaultValue: DefaultMetadataDatabase,
+		},
+		{
+			name:         "AnalyticsDatabase",
+			envVar:       "SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_ANALYTICS__DATABASE",
+			envValue:     "test_analytics",
+			expectedFunc: func(c Config) string { return c.Clickhouse.AnalyticsDatabase },
+			defaultValue: DefaultAnalyticsDatabase,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(tt.envVar, tt.envValue)
+
+			conf, err := config.New(
+				context.Background(),
+				config.ResolverConfig{
+					Uris: []string{"env:"},
+					ProviderFactories: []config.ProviderFactory{
+						envprovider.NewFactory(),
+					},
+				},
+				[]factory.ConfigFactory{
+					NewConfigFactory(),
+				},
+			)
+			require.NoError(t, err)
+
+			actual := Config{}
+			err = conf.Unmarshal("telemetrystore", &actual)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.envValue, tt.expectedFunc(actual))
+		})
+
+		t.Run(tt.name+"_Default", func(t *testing.T) {
+			conf, err := config.New(
+				context.Background(),
+				config.ResolverConfig{
+					Uris: []string{"env:"},
+					ProviderFactories: []config.ProviderFactory{
+						envprovider.NewFactory(),
+					},
+				},
+				[]factory.ConfigFactory{
+					NewConfigFactory(),
+				},
+			)
+			require.NoError(t, err)
+
+			actual := Config{}
+			err = conf.Unmarshal("telemetrystore", &actual)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.defaultValue, tt.expectedFunc(actual))
+		})
+	}
+}
