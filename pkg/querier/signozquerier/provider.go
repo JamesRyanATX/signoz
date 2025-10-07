@@ -48,20 +48,20 @@ func newProvider(
 	telemetryMetadataStore := telemetrymetadata.NewTelemetryMetaStore(
 		settings,
 		telemetryStore,
-		telemetrytraces.DBName,
+		telemetrytraces.DBName(),
 		telemetrytraces.TagAttributesV2TableName,
 		telemetrytraces.SpanAttributesKeysTblName,
 		telemetrytraces.SpanIndexV3TableName,
-		telemetrymetrics.DBName,
+		telemetrymetrics.DBName(),
 		telemetrymetrics.AttributesMetadataTableName,
-		telemetrymeter.DBName,
+		telemetrymeter.DBName(),
 		telemetrymeter.SamplesAgg1dTableName,
-		telemetrylogs.DBName,
+		telemetrylogs.DBName(),
 		telemetrylogs.LogsV2TableName,
 		telemetrylogs.TagAttributesV2TableName,
 		telemetrylogs.LogAttributeKeysTblName,
 		telemetrylogs.LogResourceKeysTblName,
-		telemetrymetadata.DBName,
+		telemetrymetadata.DBName(),
 		telemetrymetadata.AttributesMetadataLocalTableName,
 	)
 
@@ -76,6 +76,7 @@ func newProvider(
 		resourceFilterFieldMapper,
 		resourceFilterConditionBuilder,
 		telemetryMetadataStore,
+		telemetrytraces.DBName(),
 	)
 
 	traceAggExprRewriter := querybuilder.NewAggExprRewriter(settings, nil, traceFieldMapper, traceConditionBuilder, "", nil)
@@ -108,6 +109,7 @@ func newProvider(
 		resourceFilterFieldMapper,
 		resourceFilterConditionBuilder,
 		telemetryMetadataStore,
+		telemetrylogs.DBName(),
 		telemetrylogs.DefaultFullTextColumn,
 		telemetrylogs.BodyJSONStringSearchPrefix,
 		telemetrylogs.GetBodyJSONKey,

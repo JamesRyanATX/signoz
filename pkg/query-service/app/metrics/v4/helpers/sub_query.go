@@ -349,7 +349,7 @@ func PrepareTimeseriesFilterQuery(start, end int64, mq *v3.BuilderQuery) (string
 	filterSubQuery := fmt.Sprintf(
 		"SELECT DISTINCT %s FROM %s.%s WHERE %s",
 		selectLabels,
-		constants.SIGNOZ_METRIC_DBNAME,
+		constants.SIGNOZ_METRIC_DBNAME(),
 		tableName,
 		whereClause,
 	)
@@ -439,7 +439,7 @@ func PrepareTimeseriesFilterQueryV3(start, end int64, mq *v3.BuilderQuery) (stri
 	filterSubQuery := fmt.Sprintf(
 		"SELECT DISTINCT %s FROM %s.%s WHERE %s",
 		selectLabels,
-		constants.SIGNOZ_METRIC_DBNAME,
+		constants.SIGNOZ_METRIC_DBNAME(),
 		tableName,
 		whereClause,
 	)

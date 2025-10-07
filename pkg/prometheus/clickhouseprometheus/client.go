@@ -130,7 +130,7 @@ func (client *client) queryToClickhouseQuery(_ context.Context, query *prompb.Qu
 
 	whereClause := strings.Join(conditions, " AND ")
 
-	clickHouseQuery = fmt.Sprintf(`SELECT %s FROM %s.%s WHERE %s GROUP BY fingerprint`, selectString, databaseName, tableName, whereClause)
+	clickHouseQuery = fmt.Sprintf(`SELECT %s FROM %s.%s WHERE %s GROUP BY fingerprint`, selectString, databaseName(), tableName, whereClause)
 
 	return clickHouseQuery, args, nil
 }
@@ -173,7 +173,7 @@ func (client *client) querySamples(ctx context.Context, start int64, end int64, 
 		SELECT metric_name, fingerprint, unix_milli, value, flags
 			FROM %s.%s
 			WHERE metric_name = $1 AND fingerprint GLOBAL IN (%s) AND unix_milli >= $%s AND unix_milli <= $%s ORDER BY fingerprint, unix_milli;`,
-		databaseName, distributedSamplesV4, subQuery, strconv.Itoa(argCount+2), strconv.Itoa(argCount+3))
+		databaseName(), distributedSamplesV4, subQuery, strconv.Itoa(argCount+2), strconv.Itoa(argCount+3))
 	query = strings.TrimSpace(query)
 
 	allArgs := append([]any{metricName}, args...)

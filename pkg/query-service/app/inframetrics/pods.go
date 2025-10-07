@@ -113,7 +113,7 @@ func (p *PodsRepo) DidSendPodMetrics(ctx context.Context) (bool, error) {
 	namesStr := "'" + strings.Join(podMetricNamesToCheck, "','") + "'"
 
 	query := fmt.Sprintf(didSendPodMetricsQuery,
-		constants.SIGNOZ_METRIC_DBNAME, constants.SIGNOZ_TIMESERIES_v4_1DAY_TABLENAME, namesStr)
+		constants.SIGNOZ_METRIC_DBNAME(), constants.SIGNOZ_TIMESERIES_v4_1DAY_TABLENAME, namesStr)
 
 	count, err := p.reader.GetCountOfThings(ctx, query)
 	if err != nil {
@@ -127,7 +127,7 @@ func (p *PodsRepo) DidSendClusterMetrics(ctx context.Context) (bool, error) {
 	namesStr := "'" + strings.Join(clusterMetricNamesToCheck, "','") + "'"
 
 	query := fmt.Sprintf(didSendClusterMetricsQuery,
-		constants.SIGNOZ_METRIC_DBNAME, constants.SIGNOZ_TIMESERIES_v4_1DAY_TABLENAME, namesStr)
+		constants.SIGNOZ_METRIC_DBNAME(), constants.SIGNOZ_TIMESERIES_v4_1DAY_TABLENAME, namesStr)
 
 	count, err := p.reader.GetCountOfThings(ctx, query)
 	if err != nil {
@@ -141,7 +141,7 @@ func (p *PodsRepo) IsSendingOptionalPodMetrics(ctx context.Context) (bool, error
 	namesStr := "'" + strings.Join(optionalPodMetricNamesToCheck, "','") + "'"
 
 	query := fmt.Sprintf(isSendingOptionalPodMetricsQuery,
-		constants.SIGNOZ_METRIC_DBNAME, constants.SIGNOZ_TIMESERIES_v4_1DAY_TABLENAME, namesStr)
+		constants.SIGNOZ_METRIC_DBNAME(), constants.SIGNOZ_TIMESERIES_v4_1DAY_TABLENAME, namesStr)
 
 	count, err := p.reader.GetCountOfThings(ctx, query)
 	if err != nil {
@@ -155,7 +155,7 @@ func (p *PodsRepo) SendingRequiredMetadata(ctx context.Context) ([]model.PodOnbo
 	namesStr := "'" + strings.Join(podMetricNamesToCheck, "','") + "'"
 
 	query := fmt.Sprintf(isSendingRequiredMetadataQuery,
-		constants.SIGNOZ_METRIC_DBNAME, constants.SIGNOZ_TIMESERIES_V4_TABLENAME, namesStr)
+		constants.SIGNOZ_METRIC_DBNAME(), constants.SIGNOZ_TIMESERIES_V4_TABLENAME, namesStr)
 
 	result, err := p.reader.GetListResultV3(ctx, query)
 	if err != nil {

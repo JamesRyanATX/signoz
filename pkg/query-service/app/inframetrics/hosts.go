@@ -326,7 +326,7 @@ func (h *HostsRepo) DidSendHostMetricsData(ctx context.Context, req model.HostLi
 	namesStr := "'" + strings.Join(names, "','") + "'"
 
 	query := fmt.Sprintf("SELECT count() FROM %s.%s WHERE metric_name IN (%s)",
-		constants.SIGNOZ_METRIC_DBNAME, constants.SIGNOZ_TIMESERIES_v4_1DAY_TABLENAME, namesStr)
+		constants.SIGNOZ_METRIC_DBNAME(), constants.SIGNOZ_TIMESERIES_v4_1DAY_TABLENAME, namesStr)
 
 	count, err := h.reader.GetCountOfThings(ctx, query)
 	if err != nil {
@@ -348,7 +348,7 @@ func (h *HostsRepo) IsSendingK8SAgentMetrics(ctx context.Context, req model.Host
 	FROM %s.%s
 	WHERE metric_name IN (%s)
 		AND unix_milli >= toUnixTimestamp(now() - INTERVAL 5 MINUTE) * 1000`,
-		constants.SIGNOZ_METRIC_DBNAME, constants.SIGNOZ_SAMPLES_V4_TABLENAME, namesStr)
+		constants.SIGNOZ_METRIC_DBNAME(), constants.SIGNOZ_SAMPLES_V4_TABLENAME, namesStr)
 
 	query := fmt.Sprintf(`
 	SELECT DISTINCT JSONExtractString(labels, '%s') as k8s_cluster_name, JSONExtractString(labels, '%s') as k8s_node_name
@@ -358,7 +358,7 @@ func (h *HostsRepo) IsSendingK8SAgentMetrics(ctx context.Context, req model.Host
 		AND JSONExtractString(labels, '%s') LIKE '%%-otel-agent%%'
 		AND fingerprint GLOBAL IN (%s)`,
 		GetDotMetrics("k8s_cluster_name"), GetDotMetrics("k8s_node_name"),
-		constants.SIGNOZ_METRIC_DBNAME, constants.SIGNOZ_TIMESERIES_V4_TABLENAME, namesStr, GetDotMetrics("host_name"), queryForRecentFingerprints)
+		constants.SIGNOZ_METRIC_DBNAME(), constants.SIGNOZ_TIMESERIES_V4_TABLENAME, namesStr, GetDotMetrics("host_name"), queryForRecentFingerprints)
 
 	result, err := h.reader.GetListResultV3(ctx, query)
 	if err != nil {
