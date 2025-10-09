@@ -1,9 +1,13 @@
-import { GoogleSquareFilled, KeyOutlined } from '@ant-design/icons';
+import {
+	DatabaseOutlined,
+	GoogleSquareFilled,
+	KeyOutlined,
+} from '@ant-design/icons';
 import { Typography } from 'antd';
 import { FeatureKeys } from 'constants/features';
 import { useAppContext } from 'providers/App/App';
 import { useCallback, useMemo } from 'react';
-import { AuthDomain, GOOGLE_AUTH, SAML } from 'types/api/SAML/listDomain';
+import { AuthDomain, GOOGLE_AUTH, LDAP, SAML } from 'types/api/SAML/listDomain';
 
 import Row, { RowProps } from './Row';
 import { RowContainer, RowSpace } from './styles';
@@ -30,12 +34,20 @@ function Create({
 		setIsEditModalOpen(true);
 	}, [assignSsoMethod, setIsSettingsOpen, setIsEditModalOpen]);
 
+	const onEditLDAPHandler = useCallback(() => {
+		assignSsoMethod(LDAP);
+		setIsSettingsOpen(false);
+		setIsEditModalOpen(true);
+	}, [assignSsoMethod, setIsSettingsOpen, setIsEditModalOpen]);
+
 	const ConfigureButtonText = useMemo(() => {
 		switch (ssoMethod) {
 			case GOOGLE_AUTH:
 				return 'Edit Google Auth';
 			case SAML:
 				return 'Edit SAML';
+			case LDAP:
+				return 'Edit LDAP';
 			default:
 				return 'Get Started';
 		}
@@ -68,6 +80,15 @@ function Create({
 						</>
 					),
 					title: 'SAML Authentication',
+					isDisabled: false,
+				},
+				{
+					buttonText: ConfigureButtonText,
+					Icon: <DatabaseOutlined style={{ fontSize: '37px' }} />,
+					onClickHandler: onEditLDAPHandler,
+					subTitle:
+						'OpenLDAP, Active Directory, or any LDAP-compatible directory service',
+					title: 'LDAP Authentication',
 					isDisabled: false,
 				},
 		  ]

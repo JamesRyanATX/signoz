@@ -27,17 +27,49 @@ export function isGoogleAuthConfig(
 	return value?.clientId !== undefined || value?.clientSecret !== undefined;
 }
 
+export interface LDAPConfig {
+	serverUrl: string;
+	serverPort: number;
+	bindDn: string;
+	bindPassword: string;
+	userBaseDn: string;
+	userFilter: string;
+	usernameAttribute: string;
+	emailAttribute: string;
+	displayNameAttribute: string;
+	groupBaseDn?: string;
+	groupFilter?: string;
+	groupMemberAttr?: string;
+	useTls: boolean;
+	useStartTls: boolean;
+	skipTlsVerify?: boolean;
+	searchTimeout?: number;
+	connTimeout?: number;
+}
+
+export function isLDAPConfig(
+	value: LDAPConfig | undefined,
+): value is LDAPConfig {
+	return (
+		value?.serverUrl !== undefined ||
+		value?.bindDn !== undefined ||
+		value?.userBaseDn !== undefined
+	);
+}
+
 export const SAML = 'SAML';
 export const GOOGLE_AUTH = 'GOOGLE_AUTH';
+export const LDAP = 'LDAP';
 
 export interface AuthDomain {
 	id: string;
 	name: string;
 	orgId: Organization['id'];
 	ssoEnabled: boolean;
-	ssoType: 'SAML' | 'GOOGLE_AUTH';
+	ssoType: 'SAML' | 'GOOGLE_AUTH' | 'LDAP';
 	samlConfig?: SAMLConfig;
 	googleAuthConfig?: GoogleAuthConfig;
+	ldapConfig?: LDAPConfig;
 }
 
 export interface Props {

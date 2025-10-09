@@ -62,6 +62,9 @@ type Module interface {
 	UpdateDomain(ctx context.Context, domain *types.GettableOrgDomain) error
 	DeleteDomain(ctx context.Context, id uuid.UUID) error
 
+	// LDAP
+	TestLdapConnection(ctx context.Context, config *types.GettableOrgDomain) error
+
 	// API KEY
 	CreateAPIKey(ctx context.Context, apiKey *types.StorableAPIKey) error
 	UpdateAPIKey(ctx context.Context, id valuer.UUID, apiKey *types.StorableAPIKey, updaterID valuer.UUID) error
@@ -111,4 +114,7 @@ type Handler interface {
 	CreateDomain(http.ResponseWriter, *http.Request)
 	UpdateDomain(http.ResponseWriter, *http.Request)
 	DeleteDomain(http.ResponseWriter, *http.Request)
+
+	// LDAP
+	TestLdapConnection(http.ResponseWriter, *http.Request)
 }

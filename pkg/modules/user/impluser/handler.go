@@ -770,3 +770,25 @@ func (h *handler) UpdateDomain(rw http.ResponseWriter, r *http.Request) {
 
 	render.Success(rw, http.StatusNoContent, nil)
 }
+
+func (h *handler) TestLdapConnection(rw http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second) // Longer timeout for LDAP connection
+	defer cancel()
+
+	req := types.GettableOrgDomain{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		render.Error(rw, err)
+		return
+	}
+
+	// Test LDAP connection
+	err := h.module.TestLdapConnection(ctx, &req)
+	if err != nil {
+		render.Error(rw, err)
+		return
+	}
+
+	render.Success(rw, http.StatusOK, map[string]string{
+		"message": "LDAP connection test successful",
+	})
+}
