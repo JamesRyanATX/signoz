@@ -362,6 +362,19 @@ func (m *Module) GetAuthenticatedUser(ctx context.Context, orgID, email, passwor
 		return &user.User, nil
 	}
 
+	// Check if the user's domain has LDAP authentication enabled FIRST
+	// This allows auto-provisioning of new users from LDAP
+	domain, err := m.GetAuthDomainByEmail(ctx, email)
+	if err == nil && domain != nil && domain.SsoEnabled && domain.SsoType == types.LDAP {
+		// Authenticate using LDAP (this will auto-provision if user doesn't exist)
+		ldapUser, err := m.AuthenticateWithLDAP(ctx, email, password, domain)
+		if err != nil {
+			return nil, err
+		}
+		return ldapUser, nil
+	}
+
+	// For non-LDAP authentication, check if user exists
 	var dbUser *types.User
 	// when the orgID is not provided we login if the user exists in just one org
 	users, err := m.store.GetUsersByEmail(ctx, email)
@@ -375,27 +388,6 @@ func (m *Module) GetAuthenticatedUser(ctx context.Context, orgID, email, passwor
 		dbUser = &users[0].User
 	} else {
 		return nil, errors.New(errors.TypeInvalidInput, errors.CodeInvalidInput, "please provide an orgID")
-	}
-
-	// Check if the user's domain has LDAP authentication enabled
-	domain, err := m.GetAuthDomainByEmail(ctx, email)
-	if err == nil && domain != nil && domain.SsoEnabled && domain.SsoType == types.LDAP {
-		// Authenticate using LDAP
-		ldapUser, err := m.AuthenticateWithLDAP(ctx, email, password, domain)
-		if err != nil {
-			return nil, err
-		}
-
-		// Update user display name if it changed in LDAP
-		if ldapUser.DisplayName != "" && ldapUser.DisplayName != dbUser.DisplayName {
-			dbUser.DisplayName = ldapUser.DisplayName
-			_, err = m.UpdateUser(ctx, dbUser.OrgID, dbUser.ID.StringValue(), dbUser, dbUser.ID.StringValue())
-			if err != nil {
-				m.settings.Logger().ErrorContext(ctx, "failed to update user display name from LDAP", "error", err)
-			}
-		}
-
-		return dbUser, nil
 	}
 
 	// Fallback to password authentication
