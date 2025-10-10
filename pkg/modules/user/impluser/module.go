@@ -636,7 +636,13 @@ func (m *Module) CanUsePassword(ctx context.Context, email string) (bool, error)
 	}
 
 	if domain != nil && domain.SsoEnabled {
-		// sso is enabled, check if the user has admin role
+		// LDAP users can use password authentication (it goes through LDAP)
+		// and auto-provisioning handles users that don't exist yet
+		if domain.SsoType == types.LDAP {
+			return true, nil
+		}
+
+		// For other SSO types (SAML, Google), check if the user has admin role
 		users, err := m.GetUsersByEmail(ctx, email)
 		if err != nil {
 			return false, err
