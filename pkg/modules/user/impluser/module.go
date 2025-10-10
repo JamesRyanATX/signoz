@@ -430,8 +430,9 @@ func (m *Module) AuthenticateWithLDAP(ctx context.Context, email, password strin
 		return nil, errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "LDAP email mismatch: expected %s, got %s", email, ldapAttrs.Email)
 	}
 
-	// Get or create user
-	users, err := m.GetUsersByEmail(ctx, email)
+	// Get or create user - use the canonical email from LDAP (not the typed email)
+	// This ensures case-insensitive matching (james.ryan vs James.Ryan)
+	users, err := m.GetUsersByEmail(ctx, ldapAttrs.Email)
 	if err != nil && !errors.Ast(err, errors.TypeNotFound) {
 		return nil, err
 	}
