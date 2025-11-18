@@ -207,12 +207,18 @@ func (service *Service) getConfig(ctx context.Context, orgID string) (*alertmana
 			return nil, err
 		}
 
+		// Config doesn't exist, create a new default config
+		// NewDefaultConfig already sets the global and route config, so we return early
+		// to avoid calling SetRouteConfig again (which would duplicate group_by labels)
 		config, err = alertmanagertypes.NewDefaultConfig(service.config.Global, service.config.Route, orgID)
 		if err != nil {
 			return nil, err
 		}
+
+		return config, nil
 	}
 
+	// Config exists in database, update it with current global and route settings
 	if err := config.SetGlobalConfig(service.config.Global); err != nil {
 		return nil, err
 	}
