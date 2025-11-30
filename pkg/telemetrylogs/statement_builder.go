@@ -255,7 +255,7 @@ func (b *logQueryStatementBuilder) buildListQuery(
 	}
 
 	// From table
-	sb.From(fmt.Sprintf("%s.%s", DBName, LogsV2TableName))
+	sb.From(fmt.Sprintf("%s.%s", DBName(), LogsV2TableName))
 
 	// Add filter conditions
 	preparedWhereClause, err := b.addFilterCondition(ctx, sb, start, end, query, keys, variables)
@@ -357,7 +357,7 @@ func (b *logQueryStatementBuilder) buildTimeSeriesQuery(
 		sb.SelectMore(fmt.Sprintf("%s AS __result_%d", rewritten, i))
 	}
 
-	sb.From(fmt.Sprintf("%s.%s", DBName, LogsV2TableName))
+	sb.From(fmt.Sprintf("%s.%s", DBName(), LogsV2TableName))
 	preparedWhereClause, err := b.addFilterCondition(ctx, sb, start, end, query, keys, variables)
 
 	if err != nil {
@@ -508,7 +508,7 @@ func (b *logQueryStatementBuilder) buildScalarQuery(
 	}
 
 	// From table
-	sb.From(fmt.Sprintf("%s.%s", DBName, LogsV2TableName))
+	sb.From(fmt.Sprintf("%s.%s", DBName(), LogsV2TableName))
 
 	// Add filter conditions
 	preparedWhereClause, err := b.addFilterCondition(ctx, sb, start, end, query, keys, variables)

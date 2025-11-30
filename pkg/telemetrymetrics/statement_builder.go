@@ -314,7 +314,7 @@ func (b *MetricQueryStatementBuilder) buildTemporalAggDeltaFastPath(
 	sb.SelectMore(fmt.Sprintf("%s AS value", aggCol))
 
 	tbl := WhichSamplesTableToUse(start, end, query.Aggregations[0].Type, query.Aggregations[0].TimeAggregation, query.Aggregations[0].TableHints)
-	sb.From(fmt.Sprintf("%s.%s AS points", DBName, tbl))
+	sb.From(fmt.Sprintf("%s.%s AS points", DBName(), tbl))
 	sb.JoinWithOption(sqlbuilder.InnerJoin, timeSeriesCTE, "points.fingerprint = filtered_time_series.fingerprint")
 	sb.Where(
 		sb.In("metric_name", query.Aggregations[0].MetricName),
@@ -355,7 +355,7 @@ func (b *MetricQueryStatementBuilder) buildTimeSeriesCTE(
 	}
 
 	start, end, tbl := WhichTSTableToUse(start, end, query.Aggregations[0].TableHints)
-	sb.From(fmt.Sprintf("%s.%s", DBName, tbl))
+	sb.From(fmt.Sprintf("%s.%s", DBName(), tbl))
 
 	sb.Select("fingerprint")
 	for _, g := range query.GroupBy {
@@ -434,7 +434,7 @@ func (b *MetricQueryStatementBuilder) buildTemporalAggDelta(
 	sb.SelectMore(fmt.Sprintf("%s AS per_series_value", aggCol))
 
 	tbl := WhichSamplesTableToUse(start, end, query.Aggregations[0].Type, query.Aggregations[0].TimeAggregation, query.Aggregations[0].TableHints)
-	sb.From(fmt.Sprintf("%s.%s AS points", DBName, tbl))
+	sb.From(fmt.Sprintf("%s.%s AS points", DBName(), tbl))
 	sb.JoinWithOption(sqlbuilder.InnerJoin, timeSeriesCTE, "points.fingerprint = filtered_time_series.fingerprint")
 	sb.Where(
 		sb.In("metric_name", query.Aggregations[0].MetricName),
@@ -472,7 +472,7 @@ func (b *MetricQueryStatementBuilder) buildTemporalAggCumulativeOrUnspecified(
 	baseSb.SelectMore(fmt.Sprintf("%s AS per_series_value", aggCol))
 
 	tbl := WhichSamplesTableToUse(start, end, query.Aggregations[0].Type, query.Aggregations[0].TimeAggregation, query.Aggregations[0].TableHints)
-	baseSb.From(fmt.Sprintf("%s.%s AS points", DBName, tbl))
+	baseSb.From(fmt.Sprintf("%s.%s AS points", DBName(), tbl))
 	baseSb.JoinWithOption(sqlbuilder.InnerJoin, timeSeriesCTE, "points.fingerprint = filtered_time_series.fingerprint")
 	baseSb.Where(
 		baseSb.In("metric_name", query.Aggregations[0].MetricName),

@@ -4,6 +4,9 @@ import (
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/SigNoz/signoz/pkg/telemetrylogs"
+	"github.com/SigNoz/signoz/pkg/telemetrymetadata"
+	"github.com/SigNoz/signoz/pkg/telemetrytraces"
 )
 
 type Encoding string
@@ -15,8 +18,19 @@ const (
 	EncodingProto Encoding = "protobuf"
 )
 
+func defaultTraceDB() string {
+	return telemetrytraces.DBName()
+}
+
+func defaultLogsDB() string {
+	return telemetrylogs.DBName()
+}
+
+func defaultMetadataDB() string {
+	return telemetrymetadata.DBName()
+}
+
 const (
-	defaultTraceDB                 string        = "signoz_traces"
 	defaultOperationsTable         string        = "distributed_signoz_operations"
 	defaultIndexTable              string        = "distributed_signoz_index_v2"
 	defaultLocalIndexTable         string        = "signoz_index_v2"
@@ -28,7 +42,6 @@ const (
 	defaultTopLevelOperationsTable string        = "distributed_top_level_operations"
 	defaultSpanAttributeTableV2    string        = "distributed_tag_attributes_v2"
 	defaultSpanAttributeKeysTable  string        = "distributed_span_attributes_keys"
-	defaultLogsDB                  string        = "signoz_logs"
 	defaultLogsTable               string        = "distributed_logs"
 	defaultLogsLocalTable          string        = "logs"
 	defaultLogAttributeKeysTable   string        = "distributed_logs_attribute_keys"
@@ -49,7 +62,6 @@ const (
 	defaultTraceResourceTableV3 string = "distributed_traces_v3_resource"
 	defaultTraceSummaryTable    string = "distributed_trace_summary"
 
-	defaultMetadataDB    string = "signoz_metadata"
 	defaultMetadataTable string = "distributed_attributes_metadata"
 )
 
@@ -114,7 +126,7 @@ func NewOptions(
 		primary: &namespaceConfig{
 			namespace:               primaryNamespace,
 			Enabled:                 true,
-			TraceDB:                 defaultTraceDB,
+			TraceDB:                 defaultTraceDB(),
 			OperationsTable:         defaultOperationsTable,
 			IndexTable:              defaultIndexTable,
 			LocalIndexTable:         defaultLocalIndexTable,
@@ -126,7 +138,7 @@ func NewOptions(
 			SpanAttributeKeysTable:  defaultSpanAttributeKeysTable,
 			DependencyGraphTable:    defaultDependencyGraphTable,
 			TopLevelOperationsTable: defaultTopLevelOperationsTable,
-			LogsDB:                  defaultLogsDB,
+			LogsDB:                  defaultLogsDB(),
 			LogsTable:               defaultLogsTable,
 			LogsLocalTable:          defaultLogsLocalTable,
 			LogsAttributeKeysTable:  defaultLogAttributeKeysTable,
@@ -146,7 +158,7 @@ func NewOptions(
 			TraceLocalTableNameV3: defaultTraceLocalTableName,
 			TraceResourceTableV3:  defaultTraceResourceTableV3,
 			TraceSummaryTable:     defaultTraceSummaryTable,
-			MetadataDB:            defaultMetadataDB,
+			MetadataDB:            defaultMetadataDB(),
 			MetadataTable:         defaultMetadataTable,
 		},
 		others: make(map[string]*namespaceConfig, len(otherNamespaces)),

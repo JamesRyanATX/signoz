@@ -1,4 +1,4 @@
-package telemetrymetadata
+package analytics
 
 var dbName string
 
@@ -12,10 +12,9 @@ func DBName() string {
 	if dbName != "" {
 		return dbName
 	}
-	return "signoz_metadata"
+	return "signoz_analytics"
 }
 
 const (
-	AttributesMetadataTableName      = "distributed_attributes_metadata"
-	AttributesMetadataLocalTableName = "attributes_metadata"
+	RuleStateHistoryTableName = "distributed_rule_state_history_v0"
 )

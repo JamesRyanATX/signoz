@@ -31,6 +31,7 @@ func resourceFilterStmtBuilder() qbtypes.StatementBuilder[qbtypes.LogAggregation
 		fm,
 		cb,
 		mockMetadataStore,
+		DBName(),
 		DefaultFullTextColumn,
 		BodyJSONStringSearchPrefix,
 		GetBodyJSONKey,
