@@ -425,9 +425,10 @@ func (m *Module) AuthenticateWithLDAP(ctx context.Context, email, password strin
 		return nil, err
 	}
 
-	// Verify email matches (case-insensitive comparison)
-	if !strings.EqualFold(ldapAttrs.Email, email) {
-		return nil, errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "LDAP email mismatch: expected %s, got %s", email, ldapAttrs.Email)
+	// Verify email or username matches (case-insensitive comparison)
+	// This allows login with either email address or username
+	if !strings.EqualFold(ldapAttrs.Email, email) && !strings.EqualFold(ldapAttrs.Username, email) {
+		return nil, errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "LDAP identity mismatch: login with %s or %s", ldapAttrs.Email, ldapAttrs.Username)
 	}
 
 	// Get or create user - use the canonical email from LDAP (not the typed email)
