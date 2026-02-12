@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -365,6 +366,17 @@ func (m *Module) GetAuthenticatedUser(ctx context.Context, orgID, email, passwor
 	// Check if the user's domain has LDAP authentication enabled FIRST
 	// This allows auto-provisioning of new users from LDAP
 	domain, err := m.GetAuthDomainByEmail(ctx, email)
+
+	// If no domain found from email AND input is username-only (no "@")
+	// try to use the default SSO domain from environment variable
+	if err != nil && errors.Ast(err, errors.TypeNotFound) && !strings.Contains(email, "@") {
+		defaultDomain, defaultErr := m.tryGetDefaultAuthDomain(ctx)
+		if defaultErr == nil {
+			domain = defaultDomain
+			err = nil // Clear the error since we found a default domain
+		}
+	}
+
 	if err == nil && domain != nil && domain.SsoEnabled && domain.SsoType == types.LDAP {
 		// Authenticate using LDAP (this will auto-provision if user doesn't exist)
 		ldapUser, err := m.AuthenticateWithLDAP(ctx, email, password, domain)
@@ -425,9 +437,10 @@ func (m *Module) AuthenticateWithLDAP(ctx context.Context, email, password strin
 		return nil, err
 	}
 
-	// Verify email matches (case-insensitive comparison)
-	if !strings.EqualFold(ldapAttrs.Email, email) {
-		return nil, errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "LDAP email mismatch: expected %s, got %s", email, ldapAttrs.Email)
+	// Verify email or username matches (case-insensitive comparison)
+	// This allows login with either email address or username
+	if !strings.EqualFold(ldapAttrs.Email, email) && !strings.EqualFold(ldapAttrs.Username, email) {
+		return nil, errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "LDAP identity mismatch: login with %s or %s", ldapAttrs.Email, ldapAttrs.Username)
 	}
 
 	// Get or create user - use the canonical email from LDAP (not the typed email)
@@ -498,6 +511,17 @@ func (m *Module) LoginPrecheck(ctx context.Context, orgID, email, sourceUrl stri
 	orgDomain, err := m.GetAuthDomainByEmail(ctx, email)
 	if err != nil && !errors.Ast(err, errors.TypeNotFound) {
 		return nil, err
+	}
+
+	// If no domain found from email AND input is username-only (no "@")
+	// try to use the default SSO domain from environment variable
+	if orgDomain == nil && errors.Ast(err, errors.TypeNotFound) && !strings.Contains(email, "@") {
+		defaultDomain, defaultErr := m.tryGetDefaultAuthDomain(ctx)
+		if defaultErr == nil {
+			orgDomain = defaultDomain
+		}
+		// If default domain lookup also fails, continue with orgDomain = nil
+		// This allows graceful fallback to password authentication if configured
 	}
 
 	if orgDomain != nil && orgDomain.SsoEnabled {
@@ -670,7 +694,9 @@ func (m *Module) GetAuthDomainByEmail(ctx context.Context, email string) (*types
 
 	components := strings.Split(email, "@")
 	if len(components) < 2 {
-		return nil, errors.New(errors.TypeInvalidInput, errors.CodeInvalidInput, "invalid email format")
+		// Input doesn't contain "@" - might be a username for LDAP login
+		// Return NotFound so callers can handle username-based auth differently
+		return nil, errors.New(errors.TypeNotFound, errors.CodeNotFound, "no domain found in input")
 	}
 
 	domain, err := m.store.GetDomainByName(ctx, components[1])
@@ -682,6 +708,27 @@ func (m *Module) GetAuthDomainByEmail(ctx context.Context, email string) (*types
 	if err := gettableDomain.LoadConfig(domain.Data); err != nil {
 		return nil, errors.Wrapf(err, errors.TypeInternal, errors.CodeInternal, "failed to load domain config")
 	}
+	return gettableDomain, nil
+}
+
+// tryGetDefaultAuthDomain attempts to get auth domain using SIGNOZ_SSO_DEFAULT_DOMAIN
+// environment variable when the input doesn't contain an "@" symbol (username-only login)
+func (m *Module) tryGetDefaultAuthDomain(ctx context.Context) (*types.GettableOrgDomain, error) {
+	defaultDomain := os.Getenv("SIGNOZ_SSO_DEFAULT_DOMAIN")
+	if defaultDomain == "" {
+		return nil, errors.New(errors.TypeNotFound, errors.CodeNotFound, "no default SSO domain configured")
+	}
+
+	domain, err := m.store.GetDomainByName(ctx, defaultDomain)
+	if err != nil {
+		return nil, errors.Wrapf(err, errors.TypeNotFound, errors.CodeNotFound, "failed to get default domain: %s", defaultDomain)
+	}
+
+	gettableDomain := &types.GettableOrgDomain{StorableOrgDomain: *domain}
+	if err := gettableDomain.LoadConfig(domain.Data); err != nil {
+		return nil, errors.Wrapf(err, errors.TypeInternal, errors.CodeInternal, "failed to load default domain config")
+	}
+
 	return gettableDomain, nil
 }
 

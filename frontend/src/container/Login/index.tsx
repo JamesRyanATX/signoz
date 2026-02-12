@@ -220,11 +220,11 @@ function Login({
 
 				<ParentContainer>
 					<Label htmlFor="signupEmail" style={{ marginTop: 0 }}>
-						Email
+						Username or Email
 					</Label>
 					<FormContainer.Item name="email">
 						<Input
-							type="email"
+							type="text"
 							id="loginEmail"
 							data-testid="email"
 							required
