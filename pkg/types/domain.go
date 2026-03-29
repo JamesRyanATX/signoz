@@ -28,6 +28,7 @@ type SSOType string
 const (
 	SAML       SSOType = "SAML"
 	GoogleAuth SSOType = "GOOGLE_AUTH"
+	LDAP       SSOType = "LDAP"
 )
 
 // GettableOrgDomain identify org owned web domains for auth and other purposes
@@ -39,6 +40,7 @@ type GettableOrgDomain struct {
 
 	SamlConfig       *ssotypes.SamlConfig        `json:"samlConfig"`
 	GoogleAuthConfig *ssotypes.GoogleOAuthConfig `json:"googleAuthConfig"`
+	LdapConfig       *ssotypes.LdapConfig        `json:"ldapConfig"`
 
 	Org *Organization
 }
@@ -115,6 +117,20 @@ func (od *GettableOrgDomain) PrepareGoogleOAuthProvider(siteUrl *url.URL) (ssoty
 	}
 
 	return od.GoogleAuthConfig.GetProvider(od.Name, siteUrl)
+}
+
+// GetLdapConfig returns the LDAP configuration for this domain
+func (od *GettableOrgDomain) GetLdapConfig() (*ssotypes.LdapConfig, error) {
+	if od.LdapConfig == nil {
+		return nil, fmt.Errorf("LDAP is not setup correctly for this domain")
+	}
+
+	// Validate the configuration
+	if err := od.LdapConfig.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid LDAP configuration: %w", err)
+	}
+
+	return od.LdapConfig, nil
 }
 
 // PrepareSamlRequest creates a request accordingly gosaml2

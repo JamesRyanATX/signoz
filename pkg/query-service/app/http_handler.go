@@ -593,6 +593,7 @@ func (aH *APIHandler) RegisterRoutes(router *mux.Router, am *middleware.AuthZ) {
 	router.HandleFunc("/api/v1/domains", am.AdminAccess(aH.Signoz.Handlers.User.CreateDomain)).Methods(http.MethodPost)
 	router.HandleFunc("/api/v1/domains/{id}", am.AdminAccess(aH.Signoz.Handlers.User.UpdateDomain)).Methods(http.MethodPut)
 	router.HandleFunc("/api/v1/domains/{id}", am.AdminAccess(aH.Signoz.Handlers.User.DeleteDomain)).Methods(http.MethodDelete)
+	router.HandleFunc("/api/v1/domains/test-ldap", am.AdminAccess(aH.Signoz.Handlers.User.TestLdapConnection)).Methods(http.MethodPost)
 
 	router.HandleFunc("/api/v1/pats", am.AdminAccess(aH.Signoz.Handlers.User.CreateAPIKey)).Methods(http.MethodPost)
 	router.HandleFunc("/api/v1/pats", am.AdminAccess(aH.Signoz.Handlers.User.ListAPIKeys)).Methods(http.MethodGet)

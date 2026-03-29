@@ -3,7 +3,10 @@ import {
 	GOOGLE_AUTH,
 	GoogleAuthConfig,
 	isGoogleAuthConfig,
+	isLDAPConfig,
 	isSAMLConfig,
+	LDAP,
+	LDAPConfig,
 	SAML,
 	SAMLConfig,
 } from 'types/api/SAML/listDomain';
@@ -37,4 +40,18 @@ export function parseGoogleAuthForm(
 	}
 
 	return current.googleAuthConfig;
+}
+
+export function parseLdapForm(
+	current: AuthDomain,
+	formValues: AuthDomain,
+): LDAPConfig | undefined {
+	if (current?.ssoType === LDAP && isLDAPConfig(formValues?.ldapConfig)) {
+		return {
+			...current.ldapConfig,
+			...formValues?.ldapConfig,
+		};
+	}
+
+	return current.ldapConfig;
 }

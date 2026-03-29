@@ -3,11 +3,12 @@ import { useForm } from 'antd/lib/form/Form';
 import { useNotifications } from 'hooks/useNotifications';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AuthDomain, GOOGLE_AUTH, SAML } from 'types/api/SAML/listDomain';
+import { AuthDomain, GOOGLE_AUTH, LDAP, SAML } from 'types/api/SAML/listDomain';
 
 import EditGoogleAuth from './EditGoogleAuth';
+import EditLDAP from './EditLDAP';
 import EditSAML from './EditSAML';
-import { parseGoogleAuthForm, parseSamlForm } from './helpers';
+import { parseGoogleAuthForm, parseLdapForm, parseSamlForm } from './helpers';
 
 // renderFormInputs selectively renders form fields depending upon
 // sso type
@@ -17,6 +18,8 @@ const renderFormInputs = (
 	switch (record?.ssoType) {
 		case GOOGLE_AUTH:
 			return <EditGoogleAuth />;
+		case LDAP:
+			return <EditLDAP />;
 		case SAML:
 		default:
 			return <EditSAML />;
@@ -44,6 +47,7 @@ function EditSSO({
 					ssoType: record.ssoType,
 					samlConfig: parseSamlForm(record, values),
 					googleAuthConfig: parseGoogleAuthForm(record, values),
+					ldapConfig: parseLdapForm(record, values),
 				});
 			})
 			.catch(() => {

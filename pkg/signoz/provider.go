@@ -135,6 +135,7 @@ func NewSQLMigrationProviderFactories(
 		sqlmigration.NewAddMeterQuickFiltersFactory(sqlstore, sqlschema),
 		sqlmigration.NewUpdateTTLSettingForCustomRetentionFactory(sqlstore, sqlschema),
 		sqlmigration.NewAddRoutePolicyFactory(sqlstore, sqlschema),
+		sqlmigration.NewAddLdapSupportFactory(sqlstore),
 	)
 }
 

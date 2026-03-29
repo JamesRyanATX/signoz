@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/SigNoz/signoz/pkg/emailing"
 	"github.com/SigNoz/signoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/factory"
+	"github.com/SigNoz/signoz/pkg/ldap"
 	"github.com/SigNoz/signoz/pkg/modules/organization"
 	root "github.com/SigNoz/signoz/pkg/modules/user"
 	"github.com/SigNoz/signoz/pkg/query-service/constants"
@@ -361,6 +363,30 @@ func (m *Module) GetAuthenticatedUser(ctx context.Context, orgID, email, passwor
 		return &user.User, nil
 	}
 
+	// Check if the user's domain has LDAP authentication enabled FIRST
+	// This allows auto-provisioning of new users from LDAP
+	domain, err := m.GetAuthDomainByEmail(ctx, email)
+
+	// If no domain found from email AND input is username-only (no "@")
+	// try to use the default SSO domain from environment variable
+	if err != nil && errors.Ast(err, errors.TypeNotFound) && !strings.Contains(email, "@") {
+		defaultDomain, defaultErr := m.tryGetDefaultAuthDomain(ctx)
+		if defaultErr == nil {
+			domain = defaultDomain
+			err = nil // Clear the error since we found a default domain
+		}
+	}
+
+	if err == nil && domain != nil && domain.SsoEnabled && domain.SsoType == types.LDAP {
+		// Authenticate using LDAP (this will auto-provision if user doesn't exist)
+		ldapUser, err := m.AuthenticateWithLDAP(ctx, email, password, domain)
+		if err != nil {
+			return nil, err
+		}
+		return ldapUser, nil
+	}
+
+	// For non-LDAP authentication, check if user exists
 	var dbUser *types.User
 	// when the orgID is not provided we login if the user exists in just one org
 	users, err := m.store.GetUsersByEmail(ctx, email)
@@ -376,6 +402,7 @@ func (m *Module) GetAuthenticatedUser(ctx context.Context, orgID, email, passwor
 		return nil, errors.New(errors.TypeInvalidInput, errors.CodeInvalidInput, "please provide an orgID")
 	}
 
+	// Fallback to password authentication
 	existingPassword, err := m.store.GetPasswordByUserID(ctx, dbUser.ID)
 	if err != nil {
 		return nil, err
@@ -386,6 +413,76 @@ func (m *Module) GetAuthenticatedUser(ctx context.Context, orgID, email, passwor
 	}
 
 	return dbUser, nil
+}
+
+// AuthenticateWithLDAP authenticates a user against LDAP
+func (m *Module) AuthenticateWithLDAP(ctx context.Context, email, password string, domain *types.GettableOrgDomain) (*types.User, error) {
+	// Get LDAP configuration
+	ldapConfig, err := domain.GetLdapConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create LDAP client
+	ldapClient, err := ldap.NewClient(ldapConfig)
+	if err != nil {
+		return nil, errors.Wrapf(err, errors.TypeInternal, errors.CodeInternal, "failed to create LDAP client")
+	}
+
+	// Authenticate user with their email address
+	// The LDAP UserFilter determines how to search (by email, username, or other attribute)
+	ldapAttrs, err := ldapClient.Authenticate(email, password)
+	if err != nil {
+		m.settings.Logger().ErrorContext(ctx, "LDAP authentication failed", "email", email, "error", err)
+		return nil, err
+	}
+
+	// Verify email or username matches (case-insensitive comparison)
+	// This allows login with either email address or username
+	if !strings.EqualFold(ldapAttrs.Email, email) && !strings.EqualFold(ldapAttrs.Username, email) {
+		return nil, errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "LDAP identity mismatch: login with %s or %s", ldapAttrs.Email, ldapAttrs.Username)
+	}
+
+	// Get or create user - use the canonical email from LDAP (not the typed email)
+	// This ensures case-insensitive matching (james.ryan vs James.Ryan)
+	users, err := m.GetUsersByEmail(ctx, ldapAttrs.Email)
+	if err != nil && !errors.Ast(err, errors.TypeNotFound) {
+		return nil, err
+	}
+
+	var user *types.User
+
+	if len(users) == 0 {
+		// Create new user from LDAP attributes
+		displayName := ldapAttrs.DisplayName
+		if displayName == "" {
+			displayName = ldapAttrs.Username
+		}
+
+		// Get default org ID from domain
+		newUser, err := types.NewUser(displayName, ldapAttrs.Email, types.RoleViewer.String(), domain.OrgID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create user without password (LDAP-only authentication)
+		if err := m.CreateUser(ctx, newUser); err != nil {
+			return nil, err
+		}
+
+		user = newUser
+		m.settings.Logger().InfoContext(ctx, "created new user from LDAP", "email", email, "username", ldapAttrs.Username)
+	} else {
+		user = &users[0].User
+	}
+
+	m.analytics.TrackUser(ctx, user.OrgID, user.ID.String(), "LDAP Login", map[string]any{
+		"email":    email,
+		"username": ldapAttrs.Username,
+		"groups":   ldapAttrs.Groups,
+	})
+
+	return user, nil
 }
 
 func (m *Module) LoginPrecheck(ctx context.Context, orgID, email, sourceUrl string) (*types.GettableLoginPrecheck, error) {
@@ -416,11 +513,31 @@ func (m *Module) LoginPrecheck(ctx context.Context, orgID, email, sourceUrl stri
 		return nil, err
 	}
 
+	// If no domain found from email AND input is username-only (no "@")
+	// try to use the default SSO domain from environment variable
+	if orgDomain == nil && errors.Ast(err, errors.TypeNotFound) && !strings.Contains(email, "@") {
+		defaultDomain, defaultErr := m.tryGetDefaultAuthDomain(ctx)
+		if defaultErr == nil {
+			orgDomain = defaultDomain
+		}
+		// If default domain lookup also fails, continue with orgDomain = nil
+		// This allows graceful fallback to password authentication if configured
+	}
+
 	if orgDomain != nil && orgDomain.SsoEnabled {
 		// this is to allow self registration
 		resp.IsUser = true
 
-		// saml is enabled for this domain, lets prepare sso url
+		// For LDAP, we don't need to build an SSO URL - authentication happens directly
+		if orgDomain.SsoType == types.LDAP {
+			// LDAP uses regular password form, not redirect-based SSO
+			resp.SSO = false
+			// Allow password authentication for LDAP users
+			resp.CanSelfRegister = false
+			return resp, nil
+		}
+
+		// saml/oauth is enabled for this domain, lets prepare sso url
 		if sourceUrl == "" {
 			sourceUrl = constants.GetDefaultSiteURL()
 		}
@@ -544,7 +661,13 @@ func (m *Module) CanUsePassword(ctx context.Context, email string) (bool, error)
 	}
 
 	if domain != nil && domain.SsoEnabled {
-		// sso is enabled, check if the user has admin role
+		// LDAP users can use password authentication (it goes through LDAP)
+		// and auto-provisioning handles users that don't exist yet
+		if domain.SsoType == types.LDAP {
+			return true, nil
+		}
+
+		// For other SSO types (SAML, Google), check if the user has admin role
 		users, err := m.GetUsersByEmail(ctx, email)
 		if err != nil {
 			return false, err
@@ -571,7 +694,9 @@ func (m *Module) GetAuthDomainByEmail(ctx context.Context, email string) (*types
 
 	components := strings.Split(email, "@")
 	if len(components) < 2 {
-		return nil, errors.New(errors.TypeInvalidInput, errors.CodeInvalidInput, "invalid email format")
+		// Input doesn't contain "@" - might be a username for LDAP login
+		// Return NotFound so callers can handle username-based auth differently
+		return nil, errors.New(errors.TypeNotFound, errors.CodeNotFound, "no domain found in input")
 	}
 
 	domain, err := m.store.GetDomainByName(ctx, components[1])
@@ -583,6 +708,27 @@ func (m *Module) GetAuthDomainByEmail(ctx context.Context, email string) (*types
 	if err := gettableDomain.LoadConfig(domain.Data); err != nil {
 		return nil, errors.Wrapf(err, errors.TypeInternal, errors.CodeInternal, "failed to load domain config")
 	}
+	return gettableDomain, nil
+}
+
+// tryGetDefaultAuthDomain attempts to get auth domain using SIGNOZ_SSO_DEFAULT_DOMAIN
+// environment variable when the input doesn't contain an "@" symbol (username-only login)
+func (m *Module) tryGetDefaultAuthDomain(ctx context.Context) (*types.GettableOrgDomain, error) {
+	defaultDomain := os.Getenv("SIGNOZ_SSO_DEFAULT_DOMAIN")
+	if defaultDomain == "" {
+		return nil, errors.New(errors.TypeNotFound, errors.CodeNotFound, "no default SSO domain configured")
+	}
+
+	domain, err := m.store.GetDomainByName(ctx, defaultDomain)
+	if err != nil {
+		return nil, errors.Wrapf(err, errors.TypeNotFound, errors.CodeNotFound, "failed to get default domain: %s", defaultDomain)
+	}
+
+	gettableDomain := &types.GettableOrgDomain{StorableOrgDomain: *domain}
+	if err := gettableDomain.LoadConfig(domain.Data); err != nil {
+		return nil, errors.Wrapf(err, errors.TypeInternal, errors.CodeInternal, "failed to load default domain config")
+	}
+
 	return gettableDomain, nil
 }
 
@@ -624,6 +770,32 @@ func (m *Module) ListDomains(ctx context.Context, orgID valuer.UUID) ([]*types.G
 
 func (m *Module) UpdateDomain(ctx context.Context, domain *types.GettableOrgDomain) error {
 	return m.store.UpdateDomain(ctx, domain)
+}
+
+func (m *Module) TestLdapConnection(ctx context.Context, config *types.GettableOrgDomain) error {
+	// Validate that this is an LDAP configuration
+	if config.SsoType != types.LDAP {
+		return errors.New(errors.TypeInvalidInput, errors.CodeInvalidInput, "domain is not configured for LDAP")
+	}
+
+	// Get LDAP configuration
+	ldapConfig, err := config.GetLdapConfig()
+	if err != nil {
+		return err
+	}
+
+	// Create LDAP client
+	ldapClient, err := ldap.NewClient(ldapConfig)
+	if err != nil {
+		return errors.Wrapf(err, errors.TypeInternal, errors.CodeInternal, "failed to create LDAP client")
+	}
+
+	// Test connection
+	if err := ldapClient.TestConnection(); err != nil {
+		return errors.Wrapf(err, errors.TypeInternal, errors.CodeInternal, "LDAP connection test failed")
+	}
+
+	return nil
 }
 
 func (module *Module) CreateFirstUser(ctx context.Context, organization *types.Organization, name string, email string, passwd string) (*types.User, error) {
