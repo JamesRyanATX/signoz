@@ -175,6 +175,20 @@ func (module *module) CreateCallbackAuthNSession(ctx context.Context, authNProvi
 	return redirectURL.String(), nil
 }
 
+func (module *module) CreateLDAPSession(ctx context.Context, identifier string, password string, orgID valuer.UUID) (*authtypes.Token, error) {
+	ldapAuthN, err := getProvider[authn.PasswordAuthN](authtypes.AuthNProviderLDAP, module.authNs)
+	if err != nil {
+		return nil, err
+	}
+
+	identity, err := ldapAuthN.Authenticate(ctx, identifier, password, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	return module.tokenizer.CreateToken(ctx, identity, map[string]string{})
+}
+
 func (module *module) RotateSession(ctx context.Context, accessToken string, refreshToken string) (*authtypes.Token, error) {
 	return module.tokenizer.RotateToken(ctx, accessToken, refreshToken)
 }
@@ -199,6 +213,11 @@ func (module *module) getOrgSessionContext(ctx context.Context, org *types.Organ
 
 	if !authDomain.AuthDomainConfig().SSOEnabled {
 		return authtypes.NewOrgSessionContext(org.ID, org.Name).AddPasswordAuthNSupport(authtypes.AuthNProviderEmailPassword), nil
+	}
+
+	// PasswordAuthN SSO providers (e.g. LDAP) use the password form, not a redirect.
+	if _, ok := module.authNs[authDomain.AuthDomainConfig().AuthNProvider].(authn.PasswordAuthN); ok {
+		return authtypes.NewOrgSessionContext(org.ID, org.Name).AddPasswordAuthNSupport(authDomain.AuthDomainConfig().AuthNProvider), nil
 	}
 
 	provider, err := getProvider[authn.CallbackAuthN](authDomain.AuthDomainConfig().AuthNProvider, module.authNs)

@@ -63,6 +63,7 @@ type AuthDomainConfig struct {
 	SAML          *SamlConfig   `json:"samlConfig"`
 	Google        *GoogleConfig `json:"googleAuthConfig"`
 	OIDC          *OIDCConfig   `json:"oidcConfig"`
+	LDAP          *LdapConfig   `json:"ldapConfig"`
 	RoleMapping   *RoleMapping  `json:"roleMapping"`
 }
 
