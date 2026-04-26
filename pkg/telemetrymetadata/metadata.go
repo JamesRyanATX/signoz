@@ -507,7 +507,7 @@ func (t *telemetryMetaStore) getLogsKeys(ctx context.Context, fieldKeySelectors 
 			fmt.Sprintf("'%s' AS tag_type", telemetrytypes.FieldContextBody.TagType()),
 			"field_data_type AS tag_data_type",
 			fmt.Sprintf("%d AS priority", getPriorityForContext(telemetrytypes.FieldContextBody)),
-		).From(fmt.Sprintf("%s.%s", DBName, FieldKeysTable))
+		).From(fmt.Sprintf("%s.%s", DBName(), FieldKeysTable))
 
 		sb.Where(sb.E("signal", telemetrytypes.SignalLogs.StringValue()))
 		sb.Where(sb.E("field_context", telemetrytypes.FieldContextBody.StringValue()))

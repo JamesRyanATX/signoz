@@ -164,7 +164,7 @@ func buildListLogsJSONIndexesQuery(cluster string, filters ...string) (string, [
 		"name", "type_full", "expr", "granularity",
 	).From(fmt.Sprintf("clusterAllReplicas('%s', %s)", cluster, SkipIndexTableName))
 
-	sb.Where(sb.Equal("database", telemetrylogs.DBName))
+	sb.Where(sb.Equal("database", telemetrylogs.DBName()))
 	sb.Where(sb.Equal("table", telemetrylogs.LogsV2LocalTableName))
 	sb.Where(sb.Or(
 		sb.ILike("expr", fmt.Sprintf("%%%s%%", querybuilder.FormatValueForContains(constants.BodyV2ColumnPrefix))),
@@ -229,7 +229,7 @@ func (t *telemetryMetaStore) ListJSONValues(ctx context.Context, path string, li
 		path = telemetrylogs.BodyV2ColumnPrefix + path
 	}
 
-	from := fmt.Sprintf("%s.%s", telemetrylogs.DBName, telemetrylogs.LogsV2TableName)
+	from := fmt.Sprintf("%s.%s", telemetrylogs.DBName(), telemetrylogs.LogsV2TableName)
 	colExpr := func(typ telemetrytypes.JSONDataType) string {
 		return fmt.Sprintf("dynamicElement(%s, '%s')", path, typ.StringValue())
 	}
@@ -377,7 +377,7 @@ func (t *telemetryMetaStore) IsPathPromoted(ctx context.Context, path string) (b
 	ctx = withTelemetryContext(ctx, "IsPathPromoted")
 	split := strings.Split(path, telemetrytypes.ArraySep)
 	pathSegment := split[0]
-	query := fmt.Sprintf("SELECT 1 FROM %s.%s WHERE signal = ? AND column_name = ? AND field_context = ? AND field_name = ? LIMIT 1", DBName, PromotedPathsTableName)
+	query := fmt.Sprintf("SELECT 1 FROM %s.%s WHERE signal = ? AND column_name = ? AND field_context = ? AND field_name = ? LIMIT 1", DBName(), PromotedPathsTableName)
 	rows, err := t.telemetrystore.ClickhouseDB().Query(ctx, query, telemetrytypes.SignalLogs, telemetrylogs.LogsV2BodyPromotedColumn, telemetrytypes.FieldContextBody, pathSegment)
 	if err != nil {
 		return false, errors.WrapInternalf(err, CodeFailCheckPathPromoted, "failed to check if path %s is promoted", path)
@@ -390,7 +390,7 @@ func (t *telemetryMetaStore) IsPathPromoted(ctx context.Context, path string) (b
 // GetPromotedPaths returns promoted paths from the Column Evolution table (field_name for logs body).
 func (t *telemetryMetaStore) GetPromotedPaths(ctx context.Context, paths ...string) (map[string]bool, error) {
 	ctx = withTelemetryContext(ctx, "GetPromotedPaths")
-	sb := sqlbuilder.Select("field_name").From(fmt.Sprintf("%s.%s", DBName, PromotedPathsTableName))
+	sb := sqlbuilder.Select("field_name").From(fmt.Sprintf("%s.%s", DBName(), PromotedPathsTableName))
 	conditions := []string{
 		sb.Equal("signal", telemetrytypes.SignalLogs),
 		sb.Equal("column_name", telemetrylogs.LogsV2BodyPromotedColumn),
@@ -438,7 +438,7 @@ func CleanPathPrefixes(path string) string {
 func (t *telemetryMetaStore) PromotePaths(ctx context.Context, paths ...string) error {
 	ctx = withTelemetryContext(ctx, "PromotePaths")
 	batch, err := t.telemetrystore.ClickhouseDB().PrepareBatch(ctx,
-		fmt.Sprintf("INSERT INTO %s.%s (signal, column_name, column_type, field_context, field_name, version, release_time) VALUES", DBName,
+		fmt.Sprintf("INSERT INTO %s.%s (signal, column_name, column_type, field_context, field_name, version, release_time) VALUES", DBName(),
 			PromotedPathsTableName))
 	if err != nil {
 		return errors.WrapInternalf(err, CodeFailedToPrepareBatch, "failed to prepare batch")
