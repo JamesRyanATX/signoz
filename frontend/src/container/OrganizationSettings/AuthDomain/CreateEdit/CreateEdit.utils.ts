@@ -6,6 +6,25 @@ import {
 	AuthtypesSamlConfigDTO,
 } from 'api/generated/services/sigNoz.schemas';
 
+export interface LdapConfigFormValues {
+	serverUrl?: string;
+	serverPort?: number;
+	bindDn?: string;
+	bindPassword?: string;
+	userBaseDn?: string;
+	userFilter?: string;
+	emailAttribute?: string;
+	displayNameAttribute?: string;
+	groupBaseDn?: string;
+	groupFilter?: string;
+	groupMemberAttr?: string;
+	useTls?: boolean;
+	useStartTls?: boolean;
+	skipTlsVerify?: boolean;
+	searchTimeout?: number;
+	connTimeout?: number;
+}
+
 // Form values interface for internal use (includes array-based fields for UI)
 export interface FormValues {
 	name?: string;
@@ -16,6 +35,7 @@ export interface FormValues {
 	};
 	samlConfig?: AuthtypesSamlConfigDTO;
 	oidcConfig?: AuthtypesOIDCConfigDTO;
+	ldapConfig?: LdapConfigFormValues;
 	roleMapping?: AuthtypesRoleMappingDTO & {
 		groupMappingsList?: Array<{ groupName?: string; role?: string }>;
 	};

@@ -28,6 +28,7 @@ import {
 	prepareInitialValues,
 } from './CreateEdit.utils';
 import ConfigureGoogleAuthAuthnProvider from './Providers/AuthnGoogleAuth';
+import ConfigureLDAPAuthnProvider from './Providers/AuthnLDAP';
 import ConfigureOIDCAuthnProvider from './Providers/AuthnOIDC';
 import ConfigureSAMLAuthnProvider from './Providers/AuthnSAML';
 
@@ -43,6 +44,8 @@ function configureAuthnProvider(
 			return <ConfigureGoogleAuthAuthnProvider isCreate={isCreate} />;
 		case 'oidc':
 			return <ConfigureOIDCAuthnProvider isCreate={isCreate} />;
+		case 'ldap':
+			return <ConfigureLDAPAuthnProvider isCreate={isCreate} />;
 		default:
 			return <ConfigureGoogleAuthAuthnProvider isCreate={isCreate} />;
 	}
@@ -146,6 +149,7 @@ function CreateOrEdit(props: CreateOrEditProps): JSX.Element {
 		const googleAuthConfig = getGoogleAuthConfig();
 		const samlConfig = form.getFieldValue('samlConfig');
 		const oidcConfig = form.getFieldValue('oidcConfig');
+		const ldapConfig = form.getFieldValue('ldapConfig');
 		const roleMapping = getRoleMapping();
 
 		if (isCreate) {
@@ -159,6 +163,7 @@ function CreateOrEdit(props: CreateOrEditProps): JSX.Element {
 							googleAuthConfig,
 							samlConfig,
 							oidcConfig,
+							ldapConfig,
 							roleMapping,
 						},
 					},
@@ -186,6 +191,7 @@ function CreateOrEdit(props: CreateOrEditProps): JSX.Element {
 							googleAuthConfig,
 							samlConfig,
 							oidcConfig,
+							ldapConfig,
 							roleMapping,
 						},
 					},

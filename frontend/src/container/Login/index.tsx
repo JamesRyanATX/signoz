@@ -5,6 +5,7 @@ import { Form, Input, Select, Typography } from 'antd';
 import getVersion from 'api/v1/version/get';
 import get from 'api/v2/sessions/context/get';
 import post from 'api/v2/sessions/email_password/post';
+import postLDAP from 'api/v2/sessions/ldap/post';
 import afterLogin from 'AppRoutes/utils';
 import AuthError from 'components/AuthError/AuthError';
 import ROUTES from 'constants/routes';
@@ -140,6 +141,24 @@ function Login(): JSX.Element {
 		return isPasswordAuthN || isPasswordAuthNEnabled;
 	}, [sessionsContext, sessionsOrgId, isPasswordAuthNEnabled]);
 
+	const isLDAPAuthN = useMemo((): boolean => {
+		if (!sessionsContext || !sessionsOrgId || isPasswordAuthNEnabled) {
+			return false;
+		}
+		let isLDAP = false;
+		sessionsContext.orgs.forEach((orgSession) => {
+			if (
+				orgSession.id === sessionsOrgId &&
+				orgSession.authNSupport?.password?.some(
+					(p: { provider: string }) => p.provider === 'ldap',
+				)
+			) {
+				isLDAP = true;
+			}
+		});
+		return isLDAP;
+	}, [sessionsContext, sessionsOrgId, isPasswordAuthNEnabled]);
+
 	const isCallbackAuthN = useMemo((): boolean => {
 		if (!sessionsContext) {
 			return false;
@@ -194,7 +213,13 @@ function Login(): JSX.Element {
 		setErrorMessage(undefined);
 
 		try {
-			if (isPasswordAuthN) {
+			if (isLDAPAuthN) {
+				const identifier = form.getFieldValue('email');
+				const password = form.getFieldValue('password');
+
+				const resp = await postLDAP({ identifier, password, orgId: sessionsOrgId });
+				afterLogin(resp.data.accessToken, resp.data.refreshToken);
+			} else if (isPasswordAuthN) {
 				const email = form.getFieldValue('email');
 
 				const password = form.getFieldValue('password');
