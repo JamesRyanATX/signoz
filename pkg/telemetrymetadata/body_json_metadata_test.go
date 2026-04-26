@@ -25,7 +25,7 @@ func TestBuildListLogsJSONIndexesQuery(t *testing.T) {
 			expectedSQL: "SELECT name, type_full, expr, granularity FROM clusterAllReplicas('test-cluster', system.data_skipping_indices) " +
 				"WHERE database = ? AND table = ? AND (LOWER(expr) LIKE LOWER(?) OR LOWER(expr) LIKE LOWER(?))",
 			expectedArgs: []any{
-				telemetrylogs.DBName,
+				telemetrylogs.DBName(),
 				telemetrylogs.LogsV2LocalTableName,
 				fmt.Sprintf("%%%s%%", querybuilder.FormatValueForContains(constants.BodyV2ColumnPrefix)),
 				fmt.Sprintf("%%%s%%", querybuilder.FormatValueForContains(constants.BodyPromotedColumnPrefix)),
@@ -38,7 +38,7 @@ func TestBuildListLogsJSONIndexesQuery(t *testing.T) {
 			expectedSQL: "SELECT name, type_full, expr, granularity FROM clusterAllReplicas('test-cluster', system.data_skipping_indices) " +
 				"WHERE database = ? AND table = ? AND (LOWER(expr) LIKE LOWER(?) OR LOWER(expr) LIKE LOWER(?)) AND (LOWER(expr) LIKE LOWER(?) OR LOWER(expr) LIKE LOWER(?))",
 			expectedArgs: []any{
-				telemetrylogs.DBName,
+				telemetrylogs.DBName(),
 				telemetrylogs.LogsV2LocalTableName,
 				fmt.Sprintf("%%%s%%", querybuilder.FormatValueForContains(constants.BodyV2ColumnPrefix)),
 				fmt.Sprintf("%%%s%%", querybuilder.FormatValueForContains(constants.BodyPromotedColumnPrefix)),
