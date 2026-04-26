@@ -7,8 +7,8 @@ import (
 )
 
 func TestInit(t *testing.T) {
-	// Reset for test isolation
 	dbName = ""
+	t.Cleanup(func() { dbName = "" })
 
 	Init("custom_traces_db")
 
@@ -16,8 +16,8 @@ func TestInit(t *testing.T) {
 }
 
 func TestInitEmpty(t *testing.T) {
-	// Reset for test isolation
 	dbName = ""
+	t.Cleanup(func() { dbName = "" })
 
 	Init("")
 
@@ -25,8 +25,8 @@ func TestInitEmpty(t *testing.T) {
 }
 
 func TestDBNameAfterInit(t *testing.T) {
-	// Reset for test isolation
 	dbName = ""
+	t.Cleanup(func() { dbName = "" })
 
 	Init("my_custom_traces")
 
@@ -34,15 +34,15 @@ func TestDBNameAfterInit(t *testing.T) {
 }
 
 func TestDBNameDefault(t *testing.T) {
-	// Reset for test isolation
 	dbName = ""
+	t.Cleanup(func() { dbName = "" })
 
 	assert.Equal(t, "signoz_traces", DBName())
 }
 
 func TestInitOverwrite(t *testing.T) {
-	// Reset for test isolation
 	dbName = ""
+	t.Cleanup(func() { dbName = "" })
 
 	Init("first_value")
 	assert.Equal(t, "first_value", DBName())
@@ -52,8 +52,8 @@ func TestInitOverwrite(t *testing.T) {
 }
 
 func TestInitEmptyDoesNotOverwrite(t *testing.T) {
-	// Reset for test isolation
 	dbName = ""
+	t.Cleanup(func() { dbName = "" })
 
 	Init("initial_value")
 	assert.Equal(t, "initial_value", DBName())
